@@ -1,0 +1,62 @@
+.app {
+  min-height: 100vh;
+}
+
+.header {
+  background: #1a73e8;
+  color: white;
+  padding: 2rem;
+  text-align: center;
+}
+
+.header h1 {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+}
+
+.header p {
+  opacity: 0.9;
+}
+
+.main {
+  max-width: 800px;
+  margin: 2rem auto;
+  padding: 0 1rem;
+}
+
+.status-card, .demo-section {
+  background: white;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 1rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.status-card h2, .demo-section h2 {
+  font-size: 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.online {
+  color: #34a853;
+  font-weight: 600;
+}
+
+.offline {
+  color: #ea4335;
+  font-weight: 600;
+}
+
+button {
+  background: #1a73e8;
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 4px;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #1557b0;
+}
