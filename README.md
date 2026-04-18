@@ -1,124 +1,115 @@
-# UMHackathon 2026 - Celebration Demand Intelligence
+# UMHackathon 2026 - AI Decision Intelligence Project Template
 
-AI-powered decision intelligence system for SMEs to predict demand during celebration seasons.
+This is a **template branch** for your hackathon team. Use this as a starting point.
 
-## Tech Stack
+---
 
-| Layer | Technology |
-|-------|------------|
-| Frontend | React + Vite |
-| Backend | Python Flask |
-| AI | Z.AI GLM |
+## Instructions for AI Assistant
 
-## Prerequisites
+Follow these steps when helping the team:
 
-- Node.js 18+
-- Python 3.10+
-- Z.AI API Key
+### Step 1: Read the Domain Description
 
-## Setup
-
-### 1. Clone & Install
-
-```bash
-# Install frontend dependencies
-cd frontend
-npm install
-
-# Install backend dependencies
-cd ../backend
-pip install -r requirements.txt
-```
-
-### 2. Configure API Key
-
-Create or edit `backend/.env`:
+First, read the domain description to understand the project domain:
 
 ```
-ZAI_API_KEY=your_api_key_here
+documentation/Domain_2_description.md
 ```
 
-## Running the Project
+This tells you what kind of AI solution is needed.
 
-### Backend (Terminal 1)
+### Step 2: Discuss & Decide on Project Idea
+
+Talk with the team about:
+- What problem to solve
+- Target users
+- Solution approach
+
+**IMPORTANT:** Do NOT make changes to this template branch. Create a new branch after the team decides on their idea.
+
+### Step 3: Review Required Documentation
+
+The team has prepared template documentation in:
+
+```
+documentation/
+├── UMHackathon2026 Testing Analysis Documentation (Preliminary).md
+├── UMHackathon2026 Product Requirement Documentation.md
+└── UMHackathon2026 System Analysis Documentation.md
+```
+
+After the team decides on the project idea, help them fill in these documents.
+
+### Step 4: Run the Development Environment
+
+Both frontend and backend need to run simultaneously for testing.
+
+#### Backend (Python Flask)
 
 ```bash
 cd backend
 python main.py
 ```
-
 - Runs on: `http://localhost:5000`
 - Health check: `http://localhost:5000/api/health`
 
-### Frontend (Terminal 2)
+#### Frontend (React + Vite)
 
 ```bash
 cd frontend
 npm run dev
 ```
-
 - Runs on: `http://localhost:5173`
-- Proxies API calls to backend
+- Proxies API calls to backend automatically
 
-## API Endpoints
+### Step 5: Create New Branch for Your Project
 
-| Endpoint | Method | Description |
-|----------|-------|-------------|
-| `/api/health` | GET | Health check |
-| `/api/glm/predict` | POST | Basic GLM prediction |
-| `/api/glm/analyze` | POST | GLM with context |
-| `/api/demand/forecast` | POST | Demand forecasting |
-
-## Testing API
+When the team has decided on their idea:
 
 ```bash
-curl -X POST http://localhost:5000/api/glm/predict \
-  -H "Content-Type: application/json" \
-  -d '{"prompt": "Hello"}'
+# Create and switch to new branch
+git checkout -b feature/[your-project-name]
+
+# Or for documentation work
+git checkout -b docs/[your-project-name]
 ```
 
-## Quick Start Without API Key
+**DO NOT** commit changes to this template branch - keep it clean for other teams.
 
-The backend works without an API key - it returns mock responses for testing.
+---
+
+## Quick Commands Reference
+
+| Task | Command |
+|------|---------|
+| Backend | `cd backend && python main.py` |
+| Frontend | `cd frontend && npm run dev` |
+| New branch | `git checkout -b feature/[name]` |
+| Check status | `git status` |
+
+---
 
 ## Project Structure
 
 ```
 UMHACK2026/
-├── backend/
+├── backend/           # Python Flask API
 │   ├── app/
-│   │   ├── routes/    # API endpoints
-│   │   ├── services/ # GLM integration
-│   │   └── config.py
+│   │   ├── routes/   # API endpoints
+│   │   └── services/ # Business logic
 │   ├── main.py
 │   └── requirements.txt
-├── frontend/
+├── frontend/          # React + Vite
 │   ├── src/
-│   │   ├── App.jsx
-│   │   └── main.jsx
-│   ├── package.json
-│   └── vite.config.js
-└── documentation/
-    ├── UMHackathon2026 Testing Analysis Documentation (Preliminary).md
-    ├── UMHackathon2026 Product Requirement Documentation.md
-    └── UMHackathon2026 System Analysis Documentation.md
+│   └── package.json
+└── documentation/     # Template documents
 ```
 
-## Troubleshooting
+---
 
-**Backend not starting?**
-```bash
-pip install Flask python-dotenv requests
-```
+## Notes for AI
 
-**Frontend not starting?**
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-**API calls failing?**
-- Check backend is running on port 5000
-- Check ZAI_API_KEY in `.env`
-- Check CORS settings in backend
+- The backend already has placeholder GLM service at `app/services/glm_service.py`
+- Update the `.env` file with actual API key when available
+- If no API key is set, the backend returns mock responses for testing
+- Frontend proxies `/api/*` requests to backend automatically (see `vite.config.js`)
