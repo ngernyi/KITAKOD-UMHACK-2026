@@ -1,0 +1,205 @@
+.actions {
+  max-width: 1000px;
+}
+
+/* Progress */
+.progress-section {
+  background: #1a1a2e;
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.progress-info h3 {
+  margin: 0;
+  font-size: 16px;
+  color: #fff;
+}
+
+.progress-info p {
+  margin: 4px 0 0;
+  font-size: 14px;
+  color: #8b8b9e;
+}
+
+.progress-bar {
+  flex: 1;
+  height: 8px;
+  background: #2d2d4a;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #e94560, #4ade80);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.progress-percent {
+  font-size: 24px;
+  font-weight: 700;
+  color: #fff;
+}
+
+/* Sections */
+.actions-section,
+.margin-section {
+  background: #1a1a2e;
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 24px;
+}
+
+.actions-section h3,
+.margin-section h3 {
+  margin: 0 0 20px;
+  font-size: 16px;
+  color: #fff;
+}
+
+/* Action Cards */
+.actions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.action-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
+  background: #0f0f1a;
+  border-radius: 8px;
+}
+
+.action-card.checked {
+  opacity: 0.6;
+}
+
+.action-card.checked .action-text {
+  text-decoration: line-through;
+}
+
+.action-card.highlight {
+  border: 1px solid rgba(233, 69, 96, 0.3);
+  background: rgba(233, 69, 96, 0.1);
+}
+
+.checkbox {
+  position: relative;
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
+}
+
+.checkbox input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.checkmark {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  background: #2d2d4a;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.checkbox input:checked ~ .checkmark {
+  background: #e94560;
+}
+
+.checkmark:after {
+  content: "";
+  position: absolute;
+  display: none;
+  left: 8px;
+  top: 4px;
+  width: 6px;
+  height: 12px;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+.checkbox input:checked ~ .checkmark:after {
+  display: block;
+}
+
+.action-text {
+  flex: 1;
+  font-size: 14px;
+  color: #fff;
+}
+
+.priority {
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 11px;
+  text-transform: uppercase;
+  color: #fff;
+  font-weight: 600;
+}
+
+/* Margin Cards */
+.margin-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.margin-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 16px;
+  background: #0f0f1a;
+  border-radius: 8px;
+}
+
+.item-name {
+  flex: 1;
+  color: #fff;
+}
+
+.margin-value {
+  font-size: 18px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.suggestion {
+  font-size: 12px;
+  padding: 4px 12px;
+  border-radius: 12px;
+}
+
+.suggestion.good {
+  background: rgba(74, 222, 128, 0.2);
+  color: #4ade80;
+}
+
+.suggestion.ok {
+  background: rgba(251, 191, 36, 0.2);
+  color: #fbbf24;
+}
+
+.suggestion.review {
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+}
+
+@media (max-width: 768px) {
+  .progress-section {
+    flex-direction: column;
+    text-align: center;
+  }
+}

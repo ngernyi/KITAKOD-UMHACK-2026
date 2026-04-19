@@ -1,49 +1,35 @@
-import { useState, useEffect } from 'react'
-import './App.css'
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { AppProvider } from './context/AppContext';
+import Layout from './components/Layout';
+import Dashboard from './pages/Dashboard';
+import Configuration from './pages/Configuration';
+import DataInput from './pages/DataInput';
+import ExternalData from './pages/ExternalData';
+import Analysis from './pages/Analysis';
+import Predictions from './pages/Predictions';
+import Actions from './pages/Actions';
+import AIAssistant from './pages/AIAssistant';
+import './App.css';
 
 function App() {
-  const [backendStatus, setBackendStatus] = useState('checking...')
-
-  useEffect(() => {
-    fetch('http://localhost:5000/api/health')
-      .then(res => res.json())
-      .then(data => setBackendStatus(data.status))
-      .catch(() => setBackendStatus('offline'))
-  }, [])
-
   return (
-    <div className="app">
-      <header className="header">
-        <h1>Celebration Demand Intelligence</h1>
-        <p>AI-powered demand forecasting for SMEs</p>
-      </header>
-
-      <main className="main">
-        <div className="status-card">
-          <h2>System Status</h2>
-          <p>Backend: <span className={backendStatus === 'ok' ? 'online' : 'offline'}>
-            {backendStatus}
-          </span></p>
-        </div>
-
-        <div className="demo-section">
-          <h2>Demo: Try the API</h2>
-          <button onClick={testApi}>Test Prediction</button>
-        </div>
-      </main>
-    </div>
-  )
+    <BrowserRouter>
+      <AppProvider>
+        <Routes>
+          <Route path="/" element={<Layout />}>
+            <Route index element={<Dashboard />} />
+            <Route path="data" element={<DataInput />} />
+            <Route path="external" element={<ExternalData />} />
+            <Route path="analysis" element={<Analysis />} />
+            <Route path="predictions" element={<Predictions />} />
+            <Route path="actions" element={<Actions />} />
+            <Route path="ai" element={<AIAssistant />} />
+            <Route path="config" element={<Configuration />} />
+          </Route>
+        </Routes>
+      </AppProvider>
+    </BrowserRouter>
+  );
 }
 
-function testApi() {
-  fetch('http://localhost:5000/api/glm/predict', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ prompt: 'Hello, what can you do?' })
-  })
-  .then(res => res.json())
-  .then(data => console.log(data))
-  .catch(err => console.error(err))
-}
-
-export default App
+export default App;
