@@ -1,14 +1,16 @@
-# SME Business Demand Intelligence System
+# SME Business Intelligence System
 
 ## Project Overview
 
 **Domain:** AI for Economic Empowerment & Decision Intelligence
 
+**Project Name:** SME Business Intelligence (Demo: Mini Market Focus)
+
 **Problem Statement:** SME owners (specifically mini markets/kedai runcit) struggle to predict daily demand - leading to overstocking (wasted capital) or stockouts (lost sales). They have sales data but no time to analyze it, and miss external signals (trends, holidays, weather) that affect demand.
 
 **Target Users:** SMEs - Mini markets, convenience stores, small retail shops
 
-**Example Industry Focus:** Mini Market (Kedai Runcit)
+**Current Demo Focus:** Mini Market (Kedai Runcit) - can adapt to other business types
 
 ---
 
@@ -74,16 +76,26 @@ OUTPUTS (4 Categories):
 
 ### External Data Tiers
 
-| Tier | Data Sources | Auto-fetch? |
-|------|--------------|-------------|
-| **Basic** | Calendar (public holidays) | ✅ Auto |
-| | School holidays | ✅ Auto |
-| **Intermediate** | Google Trends | ✅ Auto |
-| | Weather forecast | ✅ Auto |
-| | Industry benchmarks | ✅ Auto |
-| **Advanced** | Competitor data | Manual |
-| | Economic indicators | ✅ Auto |
-| | Custom API | Manual config |
+| Tier | Data Sources | Auto-fetch? | Example |
+|------|--------------|-------------|-----------|
+| **Basic** | Calendar (public holidays) | ✅ Auto | Hari Raya, CNY |
+| | School holidays | ✅ Auto | Mar 14-22 |
+| **Intermediate** | Google Trends | ✅ Auto | "Milo" +85%, "Nescafe" +72% |
+| | Weather forecast | ✅ Auto | Rainy week = less foot traffic |
+| | Industry benchmarks | ✅ Auto | Mini market avg +12%/year |
+| **Advanced** | Competitor data | Manual | New kedai nearby |
+| | Economic indicators | ✅ Auto | CPI, inflation |
+| | Custom API | Manual config | e-invoice data |
+
+### Example: External Data Impact (Mini Market)
+
+| External Signal | Data | Business Impact |
+|---------------|-------|---------------|
+| Google Trends | "Milo" +85% search | Stock up NOW |
+| Google Trends | "Nescafe" +72% search | Consider stocking |
+| Weather | Rainy week ahead | Expect -30% foot traffic |
+| School Holidays | Mar 14-22 | Expect +25% traffic |
+| Public Holiday | Hari Raya Apr 29-30 | Expect +60% sales |
 
 ---
 
@@ -91,54 +103,76 @@ OUTPUTS (4 Categories):
 
 ### 1. Data Analysis (Descriptive - "what happened")
 
-| Tier | Outputs | Example |
+**Mini Market Example:**
+- Enter: Sales (Milo x10, Maggi x8) + Expenses (Rent RM1500)
+- See: Today's revenue, profit margin, top products chart
+
+| Tier | Outputs | Example (Mini Market) |
 |------|---------|---------|
 | **Basic** | Sales trend chart | Line chart: daily sales last 30 days |
 | | Expense trend chart | Bar chart: monthly expenses |
 | | MoM comparison | "This month: +15% vs last month" |
-| | Top products chart | Bar chart: top 5 items |
+| | Top products chart | Bar chart: Milo #1 with 120 sold |
 | | Low sales alert | "Tuesday sales 40% below avg" |
-| | Quick stats | Today's total, profit margin |
-| **Intermediate** | Revenue vs expense chart | Combined trend showing profit |
-| | Margin by product | "Milo: 30%, Maggi: 25%" |
+| | Quick stats | Today's total: RM320, margin: 52% |
+| **Intermediate** | Revenue vs expense chart | Shows profit trend over time |
+| | Margin by product | "Milo: 30%, Maggi: 25%, Power: 35%" |
 | | Seasonality detection | "Ramadan sales always +45%" |
-| | Growth rate | "+12% YoY" |
+| | Growth rate | "+12% YoY growth" |
 | **Advanced** | Custom date range | Any period selection |
 | | Export reports | PDF/CSV download |
 
 ### 2. Predictions (Predictive - "what will happen")
 
-| Tier | Outputs | Example |
+**Mini Market Example:**
+- Input: Sales history + external data (trends, holidays)
+- Output: "Tomorrow predicted: RM350-400" | "Ramadan week: +45% expected"
+
+| Tier | Outputs | Example (Mini Market) |
 |------|---------|---------|
 | **Basic** | 7-day forecast | "Tomorrow: RM350-400" |
-| **Intermediate** | 30-day forecast | "May 25th peak: +40%" |
+| | Quick trend | "Sales trending up 📈" |
+| **Intermediate** | 30-day forecast | "May 25th (school holidays): peak +40%" |
 | | Seasonality forecast | "Ramadan: +45% expected" |
-| | Trend direction | "Sales trending up ✅" |
-| **Advanced** | Custom period | Any day/week/month forecast |
+| | Trend direction | "Upcoming peak: Hari Raya +60%" |
+| **Advanced** | Custom period | Any day/week/month |
 | | Multiple scenario | Best/worst/average case |
 
 ### 3. Action Suggestions (Prescriptive - "what should we do")
 
-| Tier | Outputs | Example |
+**Mini Market Example:**
+- Alert: "Milo low stock - reorder tomorrow"
+- Alert: "Tuesday sales always low - run promo"
+- NEW: "Nescafe trending +85% - stock more!"
+
+| Tier | Outputs | Example (Mini Market) |
 |------|---------|---------|
-| **Basic** | Low inventory alert | "Milo low - reorder tomorrow" |
-| | Low sales day alert | "Tuesday always low" |
-| **Intermediate** | Margin recommendations | "Milo: 30% margin - sell more" |
+| **Basic** | Low inventory alert | "⚠️ Milo low - reorder tomorrow" |
+| | Low sales day alert | "⚠️ Tuesday sales -40% below avg" |
+| **Intermediate** | Margin recommendations | "Power: 35% margin - sell more!" |
 | | Restock timing | "Order Milo by Friday" |
-| | Pricing suggestions | "Consider raise prices on Milo" |
-| | Promo suggestions | "Run Tuesday promo" |
-| | **Trending item alert** | "Nescafe search +85% - consider stocking" |
+| | Pricing suggestions | "Consider raise prices on Power (+35% margin)" |
+| | Promo suggestions | "Run Tuesday promo to boost sales" |
+| | **Trending item alert** 🔥 | "Nescafe search +85% - stock more!" |
 | **Advanced** | AI-powered actions | Prioritized task list |
 | | Full recommendations | Complete action plan |
 
 ### 4. AI Assumptions (Generative - "what could happen")
 
-| Tier | Outputs | Example |
+**Mini Market Example:**
+- Ask: "What if I raise prices by 10%?"
+- AI: "Profit +RM800/month, but monitor for volume drop"
+- Ask: "Why are Tuesday sales always low?"
+- AI: "Mid-week pattern, consider Tuesday promotions"
+
+| Tier | Outputs | Example (Mini Market) |
 |------|---------|---------|
-| **Basic** | - | Not available |
-| **Intermediate** | - | Not available |
-| **Advanced** | What-if analysis | "If raise prices 10%: profit +RM800/month?" |
+| **Basic** | - | Not available (add data first) |
+| **Intermediate** | - | Add data first |
+| **Advanced** | What-if analysis | "If raise prices 10%: +RM800/month profit?" |
 | | Ask AI | "Why are sales dropping?" |
+| | Ask AI | "What should I stock more of?" |
+| | Ask AI | "When is my peak season?" |
 | | Cash flow projection | "Will stay cash positive next 30 days?" |
 | | Scenario compare | "Restock now vs wait - pros/cons?" |
 
@@ -209,6 +243,29 @@ OUTPUT:
 
 ---
 
+## Benefits
+
+| Benefit | Description |
+|---------|-------------|
+| **Save Time** | Business planning from hours to minutes - no more manual spreadsheets |
+| **Know Before It Trends** | Catch items like "Nescafe trending +85%" before competitors |
+| **Data-Driven Decisions** | Decisions based on data, not gut feeling |
+| **Reduce Waste** | Accurate demand prediction reduces overstocking and waste |
+
+### Real Example (Mini Market)
+
+**Input:**
+- Sales today: Milo(10), Maggi(8), Power(5), Biscuit(12) = RM320 revenue
+- Expenses: Rent RM1500, Restock RM800
+
+**Output:**
+- 📈 Today's sales: RM320 | MoM: +15% vs last month | Top: Biscuit
+- 🔮 Tomorrow: predicted RM350-400 | Trend: Up
+- ✅Alert: Tuesday sales -40% (plan promo) | Alert: Milo low - reorder
+- 🔥 Trend: Nescafe +85% - stock more
+
+---
+
 ## Quantifiable Impact
 
 - Reduce stockouts through demand prediction
@@ -239,3 +296,27 @@ OUTPUT:
 - Trending alerts use Google Trends - shows new items gaining popularity
 - Z.AI GLM serves as core engine for all 4 output categories
 - If GLM removed, only basic analysis remains (no predictions, actions, AI)
+
+---
+
+## Quick Summary
+
+### 4 Output Categories
+1. **Data Analysis** 📈 - Charts & trends ("what happened")
+2. **Predictions** 🔮 - Forecasts ("what will happen")
+3. **Action Suggestions** ✅ - Recommendations ("what to do")
+4. **AI Assumptions** 🤖 - What-if ("what could happen")
+
+### 3 Input Tiers
+| Tier | Data | Unlock |
+|------|------|--------|
+| Basic | Sales + Expenses | Charts, alerts, 7-day forecast |
+| + | Products + Inventory | 30-day forecast, margin analysis, trends |
+| Advanced | Staff + Suppliers | Full AI What-if analysis |
+
+### External Data Sources
+- Public holidays, School holidays
+- Google Trends, Weather, Industry benchmarks
+
+### Benefits
+✅ Save time | ✅ Know trends early | ✅ Data-driven | ✅ Reduce waste
