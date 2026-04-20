@@ -1,18 +1,28 @@
+"""GigShift Flask app factory."""
+
+from __future__ import annotations
+
 from flask import Flask
-from dotenv import load_dotenv
-import os
+from flask_cors import CORS
 
-load_dotenv()
+from app.config import Config
+from app.db import init_db
 
 
-def create_app():
+def create_app(config_class: type[Config] = Config) -> Flask:
     app = Flask(__name__)
+    app.config.from_object(config_class)
 
-    app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key')
-    app.config['ZAI_API_KEY'] = os.getenv('ZAI_API_KEY')
-    app.config['ZAI_API_URL'] = os.getenv('ZAI_API_URL', 'https://api.zai.com/v1/glm')
+    CORS(
+        app,
+        resources={r"/api/*": {"origins": "*"}},
+        supports_credentials=False,
+    )
 
-    from app.routes import api
-    app.register_blueprint(api.bp)
+    init_db(app.config["DB_PATH"])
+
+    from app.routes import api as api_routes
+
+    app.register_blueprint(api_routes.bp)
 
     return app

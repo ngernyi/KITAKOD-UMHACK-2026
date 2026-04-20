@@ -1,0 +1,19 @@
+{
+  "description": "Malaysian retail fuel price (RON95 / RON97 / Diesel) per litre in RM. Sourced from MOF weekly announcement. Update the active_week entry weekly. history[] retained for backtest fidelity.",
+  "currency": "MYR",
+  "unit": "per_litre",
+  "active_week": {
+    "start": "2026-04-17",
+    "end": "2026-04-23",
+    "ron95": 2.05,
+    "ron97": 3.47,
+    "diesel": 3.35
+  },
+  "history": [
+    { "week_start": "2026-03-27", "ron95": 2.05, "ron97": 3.41, "diesel": 3.28 },
+    { "week_start": "2026-04-03", "ron95": 2.05, "ron97": 3.45, "diesel": 3.32 },
+    { "week_start": "2026-04-10", "ron95": 2.05, "ron97": 3.43, "diesel": 3.31 },
+    { "week_start": "2026-04-17", "ron95": 2.05, "ron97": 3.47, "diesel": 3.35 }
+  ],
+  "notes": "RON95 price is subsidised and rarely changes. RON97 and diesel move weekly with global crude."
+}

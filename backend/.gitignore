@@ -13,3 +13,9 @@ instance/
 *.egg-info/
 dist/
 build/
+
+# GigShift runtime data
+gigshift.db
+gigshift.db-journal
+*.sqlite
+*.sqlite3

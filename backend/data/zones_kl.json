@@ -1,0 +1,23 @@
+{
+  "description": "Whitelist of Klang Valley zones GigShift can recommend. Do not remove entries; adding new ones is safe. GLM is instructed to only recommend zones from this list.",
+  "zones": [
+    { "id": "klcc", "label": "KLCC", "type": "business_tourist", "notes": "KLCC towers, Suria mall, Bukit Bintang adjacent; tourist demand, business hours peak." },
+    { "id": "bukit_bintang", "label": "Bukit Bintang", "type": "nightlife_tourist", "notes": "Pavilion mall, entertainment district; late-night demand." },
+    { "id": "bangsar", "label": "Bangsar / Bangsar South", "type": "residential_dining", "notes": "Upper-middle residential + F&B cluster; dinner peak; weekend brunch." },
+    { "id": "mid_valley", "label": "Mid Valley / KL Sentral", "type": "mall_transit", "notes": "Mall + major transit hub; all-day demand; event-driven surges." },
+    { "id": "sunway", "label": "Sunway Pyramid / Bandar Sunway", "type": "mall_student", "notes": "Mall + university area; evening + weekend peak." },
+    { "id": "petaling_jaya_ss2", "label": "PJ SS2 / Damansara", "type": "residential_dining", "notes": "PJ F&B + residential; dinner peak." },
+    { "id": "subang_jaya", "label": "Subang Jaya", "type": "residential", "notes": "Residential hub; commute peaks AM/PM." },
+    { "id": "puchong", "label": "Puchong / IOI Mall", "type": "residential_mall", "notes": "Residential + mall; evening peak." },
+    { "id": "cheras", "label": "Cheras", "type": "residential", "notes": "Residential dense area; local commute demand." },
+    { "id": "setapak_wangsa_maju", "label": "Setapak / Wangsa Maju", "type": "residential_student", "notes": "Residential + universities; student demand." },
+    { "id": "ampang", "label": "Ampang", "type": "residential", "notes": "Residential + embassies; moderate demand." },
+    { "id": "kepong", "label": "Kepong", "type": "residential", "notes": "Residential area; commute demand." },
+    { "id": "klia_klia2", "label": "KLIA / KLIA2", "type": "airport", "notes": "Main international airport ~55km from KL center; long-haul fares but deadhead risk if return is empty." },
+    { "id": "shah_alam", "label": "Shah Alam", "type": "industrial_residential", "notes": "Commute and logistics; weekday AM/PM peak." },
+    { "id": "klang", "label": "Klang", "type": "industrial_residential", "notes": "Port + residential; longer-haul fares." },
+    { "id": "cyberjaya_putrajaya", "label": "Cyberjaya / Putrajaya", "type": "government_tech", "notes": "Tech hub + federal offices; weekday commute; quiet weekends." },
+    { "id": "mont_kiara_sri_hartamas", "label": "Mont Kiara / Sri Hartamas", "type": "residential_expat", "notes": "Expat residential + F&B; dinner peak." },
+    { "id": "kota_damansara", "label": "Kota Damansara / TTDI", "type": "residential_dining", "notes": "Affluent residential + F&B cluster; dinner peak." }
+  ]
+}

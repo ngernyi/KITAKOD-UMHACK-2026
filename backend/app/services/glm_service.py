@@ -1,162 +1,539 @@
+"""Z.AI GLM Service.
+
+This module is the *only* place in the codebase that constructs GLM
+prompts and speaks to the Z.AI API. Every other service goes through
+`generate_plan()` or `ask_followup()`.
+
+Mock-mode:
+- When `ZAI_API_KEY` is absent, `generate_plan()` returns a deterministic
+  plan-shaped JSON so the entire pipeline is demoable end-to-end. This is
+  a first-class tested path (QATD TC-110), not a dev shortcut.
 """
-Z.AI GLM Service
-Handles API calls to Z.AI's GLM (General Language Model)
-"""
+
+from __future__ import annotations
+
+import hashlib
+import json
+import logging
+import random
+import re
+import uuid
+from datetime import datetime, timedelta, timezone
+from typing import Any, Optional
 
 import requests
-import json
-import os
 from flask import current_app
 
+from app.models import (
+    AnalyticsSummary,
+    DailySignals,
+    DriverProfile,
+    Plan,
+    PlanWindow,
+    Platform,
+)
+from app.models.profile import TimeWindow
+from app.services.external_data_service import zone_whitelist
+from app.services.prompts import (
+    build_followup_system_prompt,
+    build_followup_user_prompt,
+    build_plan_system_prompt,
+    build_plan_user_prompt,
+)
 
-def get_glm_config():
-    """Get GLM API configuration from app config"""
+log = logging.getLogger("gigshift.glm")
+
+MAX_RETRIES = 1
+DEFAULT_TEMPERATURE = 0.4
+DEFAULT_MAX_TOKENS = 1200
+
+
+class GlmError(RuntimeError):
+    """Raised when the GLM call fails or returns unusable output."""
+
+
+def _get_config() -> dict:
     return {
-        'api_key': current_app.config.get('ZAI_API_KEY'),
-        'api_url': current_app.config.get('ZAI_API_URL')
+        "api_key": current_app.config.get("ZAI_API_KEY"),
+        "api_url": current_app.config.get("ZAI_API_URL"),
     }
 
 
-def call_glm(prompt, temperature=0.7, max_tokens=1000):
-    """
-    Call Z.AI GLM API with a simple prompt
+def _prompt_hash(*parts: str) -> str:
+    h = hashlib.sha256()
+    for p in parts:
+        h.update(p.encode("utf-8"))
+    return h.hexdigest()[:16]
 
-    Args:
-        prompt: The input prompt/text
-        temperature: Sampling temperature (0-1)
-        max_tokens: Maximum tokens to generate
 
-    Returns:
-        dict: Response from GLM API
-    """
-    config = get_glm_config()
-
-    if not config['api_key']:
-        return _mock_glm_response(prompt)
-
+def _post_chat(messages: list[dict], temperature: float, max_tokens: int) -> dict:
+    cfg = _get_config()
+    if not cfg["api_key"]:
+        raise GlmError("no_api_key")
     headers = {
-        'Authorization': f'Bearer {config["api_key"]}',
-        'Content-Type': 'application/json'
+        "Authorization": f"Bearer {cfg['api_key']}",
+        "Content-Type": "application/json",
     }
-
     payload = {
-        'prompt': prompt,
-        'temperature': temperature,
-        'max_tokens': max_tokens
+        "model": "glm-4.5",
+        "messages": messages,
+        "temperature": temperature,
+        "max_tokens": max_tokens,
     }
+    resp = requests.post(
+        f"{cfg['api_url']}/chat/completions",
+        headers=headers,
+        json=payload,
+        timeout=current_app.config.get("PLAN_TIMEOUT_SECONDS", 30),
+    )
+    if resp.status_code != 200:
+        raise GlmError(f"http_{resp.status_code}: {resp.text[:200]}")
+    return resp.json()
+
+
+def _extract_assistant_text(response: dict) -> str:
+    """Tolerates a couple of response shapes. Z.AI currently follows the
+    OpenAI-style `choices[0].message.content`.
+    """
 
     try:
-        response = requests.post(
-            config['api_url'],
-            headers=headers,
-            json=payload,
-            timeout=30
+        return response["choices"][0]["message"]["content"]
+    except (KeyError, IndexError, TypeError):
+        pass
+    if isinstance(response.get("response"), str):
+        return response["response"]
+    if isinstance(response.get("text"), str):
+        return response["text"]
+    raise GlmError("unrecognised_response_shape")
+
+
+def _parse_json_object(text: str) -> dict:
+    """Extract a JSON object from a raw model response.
+
+    Strategy:
+    1. Strict json.loads first.
+    2. Strip markdown fences (```json ... ```).
+    3. Regex for the outermost {...} block.
+    """
+
+    try:
+        obj = json.loads(text)
+        if isinstance(obj, dict):
+            return obj
+    except json.JSONDecodeError:
+        pass
+
+    fence = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", text, re.DOTALL | re.IGNORECASE)
+    if fence:
+        try:
+            return json.loads(fence.group(1))
+        except json.JSONDecodeError:
+            pass
+
+    brace = re.search(r"\{.*\}", text, re.DOTALL)
+    if brace:
+        try:
+            return json.loads(brace.group(0))
+        except json.JSONDecodeError:
+            pass
+
+    raise GlmError("json_parse_failed")
+
+
+# ---------- Plan generation ----------
+
+def generate_plan(
+    *,
+    profile: DriverProfile,
+    analytics: AnalyticsSummary,
+    signals: DailySignals,
+    window: TimeWindow,
+    now: Optional[datetime] = None,
+) -> Plan:
+    """Produce a Plan using the GLM (or a deterministic mock when no key).
+
+    Always returns a schema-valid `Plan`. If the model fails twice or the
+    JSON is unusable, sets `fallback_used=True` and returns a plan derived
+    from analytics alone.
+    """
+
+    now = now or datetime.now(timezone.utc)
+    zones = zone_whitelist()
+    system = build_plan_system_prompt(zones)
+    user = build_plan_user_prompt(profile, analytics, signals, window, now)
+    prompt_hash = _prompt_hash(system, user)
+
+    cfg = _get_config()
+    if not cfg["api_key"]:
+        log.info("glm.generate_plan mock_mode prompt_hash=%s", prompt_hash)
+        plan = _mock_plan(profile, analytics, signals, window, now)
+        plan.warnings.append("glm_mock_mode")
+        return plan
+
+    try:
+        response = _call_with_retry(system, user)
+        raw_text = _extract_assistant_text(response)
+        obj = _parse_json_object(raw_text)
+        return _plan_from_model_json(obj, profile, window, now, fallback_used=False)
+    except GlmError as exc:
+        log.warning("glm.generate_plan fallback reason=%s hash=%s", exc, prompt_hash)
+        plan = _fallback_plan(analytics, window, now, reason=str(exc))
+        return plan
+
+
+def _call_with_retry(system: str, user: str) -> dict:
+    last_err: Optional[Exception] = None
+    for attempt in range(MAX_RETRIES + 1):
+        try:
+            messages = [
+                {"role": "system", "content": system},
+                {"role": "user", "content": user},
+            ]
+            if attempt > 0:
+                messages.append({
+                    "role": "system",
+                    "content": (
+                        "Your previous response was not valid JSON or missed required keys. "
+                        "Return ONLY a single JSON object matching the schema. No prose."
+                    ),
+                })
+            return _post_chat(messages, DEFAULT_TEMPERATURE, DEFAULT_MAX_TOKENS)
+        except (GlmError, requests.exceptions.RequestException) as exc:
+            last_err = exc
+    raise GlmError(f"retries_exhausted: {last_err}")
+
+
+# ---------- Follow-up Q&A ----------
+
+def ask_followup(plan: Plan, question: str) -> str:
+    system = build_followup_system_prompt()
+    user = build_followup_user_prompt(plan, question)
+    cfg = _get_config()
+    if not cfg["api_key"]:
+        return _mock_followup(plan, question)
+
+    try:
+        resp = _post_chat(
+            [
+                {"role": "system", "content": system},
+                {"role": "user", "content": user},
+            ],
+            temperature=0.3,
+            max_tokens=350,
+        )
+        return _extract_assistant_text(resp).strip()
+    except (GlmError, requests.exceptions.RequestException) as exc:
+        log.warning("glm.ask_followup failed reason=%s", exc)
+        return (
+            "Sorry, I couldn't reach the reasoning engine just now. "
+            f"Based on the plan, your highest-expected slot is "
+            f"{plan.windows[0].platform.value if plan.windows else 'n/a'} "
+            f"at {plan.windows[0].zone if plan.windows else 'n/a'}."
         )
 
-        if response.status_code == 200:
-            return response.json()
-        else:
-            raise Exception(f'API error: {response.status_code} - {response.text}')
 
-    except requests.exceptions.RequestException as e:
-        raise Exception(f'Request failed: {str(e)}')
+# ---------- Mocks and fallbacks ----------
 
+def _mock_plan(
+    profile: DriverProfile,
+    analytics: AnalyticsSummary,
+    signals: DailySignals,
+    window: TimeWindow,
+    now: datetime,
+) -> Plan:
+    """Deterministic, signal-aware mock that produces realistic plans.
 
-def call_glm_with_context(prompt, context=None, system_prompt='', temperature=0.7, max_tokens=1000):
+    Uses availability window + signals + analytics to pick zones. Designed
+    to look plausible in demo and to stress-test the downstream UI.
     """
-    Call Z.AI GLM API with context/history
 
-    Args:
-        prompt: The input prompt
-        context: List of previous messages for context
-        system_prompt: System instructions
-        temperature: Sampling temperature
-        max_tokens: Maximum tokens to generate
+    duration_h = max(1.0, (window.end - window.start).total_seconds() / 3600.0)
+    slice_count = 1 if duration_h < 2.5 else (2 if duration_h < 5 else 3)
 
-    Returns:
-        dict: Response from GLM API
+    candidate_zones = [z["id"] for z in zone_whitelist()]
+    event_zones = [e.zone for e in signals.events] + [
+        z for e in signals.events for z in e.secondary_zones
+    ]
+    top_history_zones = [z.zone for z in analytics.by_zone[:3]] if analytics.by_zone else []
+
+    zone_pool = _dedupe_keep_order(event_zones + top_history_zones + candidate_zones)
+    zone_pool = [z for z in zone_pool if z in candidate_zones]
+
+    platforms = profile.platforms or [Platform.GRAB, Platform.MAXIM]
+    windows: list[PlanWindow] = []
+    slice_len = (window.end - window.start) / slice_count
+    rng = random.Random(int(window.start.timestamp()) ^ hash(profile.driver_id))
+
+    for i in range(slice_count):
+        w_start = window.start + slice_len * i
+        w_end = window.end if i == slice_count - 1 else window.start + slice_len * (i + 1)
+        zone = zone_pool[i % max(1, len(zone_pool))]
+        platform = platforms[i % len(platforms)]
+        base_rm_per_h = 25.0 if signals.weather and signals.weather.rain_mm > 3 else 32.0
+        event_boost = 8.0 if zone in event_zones else 0.0
+        expected = round((w_end - w_start).total_seconds() / 3600.0 * (base_rm_per_h + event_boost) + rng.uniform(-3, 3), 2)
+        rationale = _mock_rationale(zone, platform, signals, i == 0)
+        windows.append(
+            PlanWindow(
+                start=w_start,
+                end=w_end,
+                platform=platform,
+                zone=zone,
+                expected_nett_rm=max(0.0, expected),
+                rationale=rationale,
+            )
+        )
+
+    total = round(sum(w.expected_nett_rm for w in windows), 2)
+    confidence = 72 if signals.events else 66
+    if signals.weather and signals.weather.rain_mm > 5:
+        confidence -= 10
+
+    reasoning = _mock_reasoning(signals, analytics, profile)
+    signals_used = _mock_signals_used(signals, analytics)
+
+    return Plan(
+        plan_id=str(uuid.uuid4()),
+        driver_id=profile.driver_id,
+        availability_window=window,
+        windows=windows,
+        total_expected_nett_rm=total,
+        confidence=max(0, min(100, confidence)),
+        reasoning=reasoning,
+        signals_used=signals_used,
+        fallback_used=False,
+        warnings=[],
+        generated_at=now,
+    )
+
+
+def _mock_rationale(zone: str, platform: Platform, signals: DailySignals, is_first: bool) -> str:
+    event_here = [e for e in signals.events if zone in ([e.zone] + e.secondary_zones)]
+    if event_here:
+        e = event_here[0]
+        return (
+            f"{platform.value.title()} in {zone}: '{e.name}' at {e.venue} drives demand "
+            f"({e.expected_crowd.value} crowd)."
+        )
+    if signals.weather and signals.weather.rain_mm > 3:
+        return (
+            f"{platform.value.title()} in {zone}: light-rain window tends to lift short-trip demand; "
+            f"sheltered pickup points favoured."
+        )
+    if is_first:
+        return (
+            f"{platform.value.title()} in {zone}: historical early-window strength; "
+            f"lower platform competition at this hour."
+        )
+    return (
+        f"{platform.value.title()} in {zone}: evening dining cluster; higher surge likelihood."
+    )
+
+
+def _mock_reasoning(signals: DailySignals, analytics: AnalyticsSummary, profile: DriverProfile) -> str:
+    parts: list[str] = []
+    if signals.events:
+        parts.append(
+            f"Today has {len(signals.events)} notable KL event(s); post-dispersal demand is factored in."
+        )
+    if signals.weather:
+        parts.append(
+            f"Weather: {signals.weather.condition} with {signals.weather.rain_mm:.1f} mm rain expected."
+        )
+    if analytics.by_zone:
+        top = analytics.by_zone[0]
+        parts.append(
+            f"Your strongest recent zone is {top.zone} (avg RM {top.avg_nett_per_trip:.1f} / trip)."
+        )
+    parts.append(
+        f"Plan favours your usual platforms: {', '.join(p.value for p in profile.platforms[:2])}."
+    )
+    return " ".join(parts)
+
+
+def _mock_signals_used(signals: DailySignals, analytics: AnalyticsSummary) -> list[str]:
+    used: list[str] = []
+    if signals.weather:
+        used.append(f"weather:{signals.weather.condition.replace(' ', '_')}")
+    if signals.public_holidays:
+        used.append("holiday")
+    if signals.school_break:
+        used.append("school_break")
+    used.append(f"fuel:ron95_rm_{signals.fuel.ron95:.2f}")
+    for e in signals.events[:3]:
+        used.append(f"event:{e.id}")
+    if analytics.by_zone:
+        used.append(f"history:top_zone_{analytics.by_zone[0].zone}")
+    if analytics.by_hour:
+        used.append(f"history:hourly_peaks")
+    return used
+
+
+def _plan_from_model_json(
+    obj: dict,
+    profile: DriverProfile,
+    window: TimeWindow,
+    now: datetime,
+    fallback_used: bool,
+) -> Plan:
+    """Validate a model-returned dict against the Plan schema.
+
+    Raises GlmError on validation failure so the caller can trigger a
+    fallback. We intentionally do not fall back silently here.
     """
-    config = get_glm_config()
 
-    if not config['api_key']:
-        return _mock_glm_response(prompt)
+    try:
+        valid_zones = {z["id"] for z in zone_whitelist()}
+        windows_raw = obj.get("windows") or []
+        windows: list[PlanWindow] = []
+        for w in windows_raw:
+            if w.get("zone") not in valid_zones:
+                raise GlmError(f"zone_not_in_whitelist: {w.get('zone')}")
+            windows.append(
+                PlanWindow(
+                    start=_as_dt(w["start"]),
+                    end=_as_dt(w["end"]),
+                    platform=Platform(w["platform"]),
+                    zone=w["zone"],
+                    expected_nett_rm=float(w.get("expected_nett_rm", 0.0)),
+                    rationale=str(w.get("rationale", "")).strip()[:300],
+                )
+            )
+        if not windows:
+            raise GlmError("no_windows_in_response")
 
-    messages = []
+        plan = Plan(
+            plan_id=str(uuid.uuid4()),
+            driver_id=profile.driver_id,
+            availability_window=window,
+            windows=windows,
+            total_expected_nett_rm=float(obj.get("total_expected_nett_rm", sum(w.expected_nett_rm for w in windows))),
+            confidence=int(obj.get("confidence", 65)),
+            reasoning=str(obj.get("reasoning", "")).strip() or "No reasoning provided.",
+            signals_used=[str(s) for s in (obj.get("signals_used") or [])],
+            fallback_used=fallback_used,
+            warnings=[],
+            generated_at=now,
+        )
+        return plan
+    except (KeyError, ValueError, TypeError) as exc:
+        raise GlmError(f"schema_validation_failed: {exc}") from exc
 
+
+def _as_dt(value: Any) -> datetime:
+    if isinstance(value, datetime):
+        return value
+    from dateutil import parser as dateparser  # local import; cheap
+    return dateparser.isoparse(str(value))
+
+
+def _fallback_plan(analytics: AnalyticsSummary, window: TimeWindow, now: datetime, reason: str) -> Plan:
+    """Deterministic fallback derived from analytics only. Used when the
+    GLM fails twice. Clearly labelled so the UI can show a "using
+    historical averages" badge.
+    """
+
+    zone = (
+        analytics.by_zone[0].zone
+        if analytics.by_zone
+        else "mid_valley"
+    )
+    platform = (
+        analytics.by_platform[0].platform
+        if analytics.by_platform
+        else Platform.GRAB
+    )
+    duration_h = max(1.0, (window.end - window.start).total_seconds() / 3600.0)
+    rate = (
+        analytics.by_platform[0].avg_rm_per_hour
+        if analytics.by_platform and analytics.by_platform[0].avg_rm_per_hour > 0
+        else 25.0
+    )
+    expected = round(duration_h * rate, 2)
+
+    return Plan(
+        plan_id=str(uuid.uuid4()),
+        availability_window=window,
+        windows=[
+            PlanWindow(
+                start=window.start,
+                end=window.end,
+                platform=platform,
+                zone=zone,
+                expected_nett_rm=expected,
+                rationale="Fallback: using your historical best zone + platform for the window.",
+            )
+        ],
+        total_expected_nett_rm=expected,
+        confidence=45,
+        reasoning=(
+            "Showing a historical-average recommendation. The AI reasoning engine did not return a "
+            "usable response this time, so this plan is based purely on your past earnings. "
+            f"(reason: {reason})"
+        ),
+        signals_used=["history:fallback_averages"],
+        fallback_used=True,
+        warnings=["glm_fallback_used"],
+        generated_at=now,
+    )
+
+
+def _mock_followup(plan: Plan, question: str) -> str:
+    if not plan.windows:
+        return "The plan doesn't have any time windows yet, so I can't reason about it."
+    first = plan.windows[0]
+    mention = first.zone.replace("_", " ").title()
+    return (
+        f"Short answer: the plan already prioritises {mention} during {first.start.strftime('%H:%M')}-"
+        f"{first.end.strftime('%H:%M')} on {first.platform.value}. "
+        f"Confidence is {plan.confidence}/100. "
+        f"(Mock reasoning because no Z.AI key is configured — the real engine will give a signal-level "
+        f"answer to: '{question[:80]}')"
+    )
+
+
+def _dedupe_keep_order(items: list[str]) -> list[str]:
+    seen: set[str] = set()
+    out: list[str] = []
+    for i in items:
+        if i not in seen:
+            seen.add(i)
+            out.append(i)
+    return out
+
+
+# Kept for backward compat with the template / debug endpoints:
+
+
+def call_glm(prompt: str, temperature: float = 0.7, max_tokens: int = 1000) -> dict:
+    cfg = _get_config()
+    if not cfg["api_key"]:
+        return {"mock": True, "response": f"Mock response for: {prompt[:80]}"}
+    return _post_chat(
+        [{"role": "user", "content": prompt}],
+        temperature=temperature,
+        max_tokens=max_tokens,
+    )
+
+
+def call_glm_with_context(
+    prompt: str,
+    context: Optional[list[dict]] = None,
+    system_prompt: str = "",
+    temperature: float = 0.7,
+    max_tokens: int = 1000,
+) -> dict:
+    cfg = _get_config()
+    if not cfg["api_key"]:
+        return {"mock": True, "response": f"Mock response for: {prompt[:80]}"}
+    messages: list[dict] = []
     if system_prompt:
-        messages.append({
-            'role': 'system',
-            'content': system_prompt
-        })
-
+        messages.append({"role": "system", "content": system_prompt})
     if context:
         messages.extend(context)
-
-    messages.append({
-        'role': 'user',
-        'content': prompt
-    })
-
-    headers = {
-        'Authorization': f'Bearer {config["api_key"]}',
-        'Content-Type': 'application/json'
-    }
-
-    payload = {
-        'messages': messages,
-        'temperature': temperature,
-        'max_tokens': max_tokens
-    }
-
-    try:
-        response = requests.post(
-            f'{config["api_url"]}/chat',
-            headers=headers,
-            json=payload,
-            timeout=30
-        )
-
-        if response.status_code == 200:
-            return response.json()
-        else:
-            raise Exception(f'API error: {response.status_code} - {response.text}')
-
-    except requests.exceptions.RequestException as e:
-        raise Exception(f'Request failed: {str(e)}')
+    messages.append({"role": "user", "content": prompt})
+    return _post_chat(messages, temperature=temperature, max_tokens=max_tokens)
 
 
-def _mock_glm_response(prompt):
-    """
-    Mock GLM response when API key is not configured
-    For testing without API key
-    """
-    return {
-        'mock': True,
-        'prompt': prompt,
-        'response': f'Mock response for: {prompt[:50]}...',
-        'note': 'Add your ZAI_API_KEY in .env to use real GLM API'
-    }
-
-
-def parse_json_response(response_text):
-    """
-    Parse JSON from GLM response text
-
-    Args:
-        response_text: Raw text response from GLM
-
-    Returns:
-        dict: Parsed JSON object
-    """
-    try:
-        return json.loads(response_text)
-    except json.JSONDecodeError:
-        json_match = None
-        import re
-        match = re.search(r'\{.*\}', response_text, re.DOTALL)
-        if match:
-            try:
-                return json.loads(match.group())
-            except json.JSONDecodeError:
-                pass
-        return {'raw_text': response_text}
+def parse_json_response(text: str) -> dict:
+    return _parse_json_object(text)
