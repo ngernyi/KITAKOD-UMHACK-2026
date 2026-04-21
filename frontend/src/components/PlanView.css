@@ -1,0 +1,181 @@
+.planview {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.planview__banner {
+  border-radius: var(--radius);
+  padding: var(--space-3) var(--space-4);
+  font-size: 14px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  border: 1px solid transparent;
+}
+.planview__banner code {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  background: rgba(15, 23, 42, 0.08);
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.planview__banner--mock {
+  background: var(--info-soft);
+  border-color: var(--sky-100);
+  color: var(--sky-600);
+}
+
+.planview__banner--fallback {
+  background: var(--warn-soft);
+  border-color: var(--amber-100);
+  color: var(--amber-600);
+}
+
+.planview__summary {
+  background: linear-gradient(135deg, var(--emerald-600), var(--emerald-700));
+  color: white;
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  box-shadow: var(--shadow-lg);
+}
+
+@media (min-width: 720px) {
+  .planview__summary {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
+
+.planview__summary-main { min-width: 0; }
+
+.planview__eyebrow {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  opacity: 0.8;
+}
+
+.planview__window {
+  color: white;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin-top: 4px;
+  line-height: 1.3;
+}
+
+.planview__window-sep {
+  opacity: 0.5;
+  margin-inline: 6px;
+}
+
+.planview__kpis {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.planview__kpi {
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: var(--radius);
+  padding: var(--space-3) var(--space-4);
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.planview__kpi-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  opacity: 0.8;
+}
+
+.planview__kpi-value {
+  font-size: 22px;
+  font-weight: 800;
+  margin-top: 2px;
+  letter-spacing: -0.02em;
+}
+.planview__kpi-value small {
+  font-size: 13px;
+  font-weight: 600;
+  opacity: 0.7;
+}
+
+.planview__kpi--confidence {
+  position: relative;
+}
+.planview__kpi--low .planview__kpi-value {
+  color: #fda4af;
+}
+.planview__kpi--mid .planview__kpi-value {
+  color: #fde68a;
+}
+
+.planview__cards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.planview__section {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5) var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.planview__section-title {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+}
+
+.planview__section-subtitle {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.planview__reasoning {
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--text);
+}
+
+.planview__signals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.planview__footer {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  font-size: 12px;
+  color: var(--text-muted);
+  padding-top: var(--space-2);
+  border-top: 1px dashed var(--border);
+  flex-wrap: wrap;
+}
+.planview__footer code {
+  font-family: var(--font-mono);
+  background: var(--slate-100);
+  padding: 1px 6px;
+  border-radius: 4px;
+}

@@ -1,0 +1,164 @@
+.plancard {
+  position: relative;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5) var(--space-5) var(--space-5) calc(var(--space-5) + 6px);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  overflow: hidden;
+}
+
+.plancard__rail {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: var(--platform-color, var(--brand));
+}
+
+.plancard__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.plancard__slot {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.plancard__slot-index {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  background: var(--slate-100);
+  padding: 3px 8px;
+  border-radius: 999px;
+}
+
+.plancard__slot-time {
+  font-family: var(--font-mono);
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.plancard__slot-duration {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.plancard__earnings {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  line-height: 1.1;
+}
+
+.plancard__earnings-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.plancard__earnings-value {
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--emerald-700);
+  margin-top: 2px;
+}
+
+.plancard__earnings-rate {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.plancard__pair {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--bg);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+}
+
+.plancard__pair-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.plancard__pair-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.plancard__pair-arrow {
+  color: var(--slate-400);
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.plancard__platform {
+  display: inline-block;
+  font-weight: 700;
+  font-size: 17px;
+  padding: 4px 10px;
+  border: 2px solid currentColor;
+  border-radius: 8px;
+  width: fit-content;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.plancard__zone {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.plancard__rationale {
+  font-size: 14px;
+  color: var(--text-soft);
+  line-height: 1.5;
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-start;
+}
+
+.plancard__rationale-marker {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: var(--emerald-700);
+  background: var(--brand-soft);
+  border-radius: 4px;
+  padding: 3px 6px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}

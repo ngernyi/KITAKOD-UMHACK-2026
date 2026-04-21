@@ -1,0 +1,43 @@
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 10px 5px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.chip__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.75;
+}
+
+.chip--brand {
+  background: var(--brand-soft);
+  color: var(--emerald-700);
+  border: 1px solid var(--emerald-100);
+}
+
+.chip--info {
+  background: var(--info-soft);
+  color: var(--info);
+  border: 1px solid var(--sky-100);
+}
+
+.chip--warn {
+  background: var(--warn-soft);
+  color: var(--amber-600);
+  border: 1px solid var(--amber-100);
+}
+
+.chip--neutral {
+  background: var(--slate-100);
+  color: var(--slate-700);
+  border: 1px solid var(--slate-200);
+}
