@@ -489,17 +489,147 @@ def _fallback_plan(analytics: AnalyticsSummary, window: TimeWindow, now: datetim
     )
 
 
+_INTENT_PATTERNS = [
+    ("why", r"\bwhy\b|\breason\b|\brationale\b|\bexplain\b"),
+    ("confidence", r"\bconfiden(?:t|ce)\b|\bhow sure\b|\bcertain\b|\btrust\b"),
+    ("weather", r"\bweather\b|\brain\b|\bthunder\b|\bstorm\b|\bhot\b|\bcloud\b"),
+    ("fuel", r"\bfuel\b|\bpetrol\b|\bdiesel\b|\bron\b|\bcost\b"),
+    ("safety", r"\bsafe\b|\brisk\b|\bdanger\b|\bavoid\b|\bwarning\b"),
+    ("compare_zone", r"\b(why not|instead of|rather than|compared to|vs\.?|over)\b.*\b[a-z]+\b"),
+    ("when", r"\bwhen\b|\bwhat time\b|\bwhich hour\b"),
+    ("platform", r"\bgrab\b|\bmaxim\b|\bairasia\b|\bindrive\b|\bwhich app\b|\bwhich platform\b"),
+    ("zone", r"\bzone\b|\barea\b|\bwhere\b|\bklcc\b|\bbangsar\b|\bpj\b|\bmid valley\b|\bkl sentral\b"),
+    ("earnings", r"\bearn\b|\bmoney\b|\bincome\b|\bhow much\b|\brm\b|\bprofit\b"),
+]
+
+
+def _detect_intent(question: str) -> str:
+    q = question.lower()
+    for label, pattern in _INTENT_PATTERNS:
+        if re.search(pattern, q):
+            return label
+    return "general"
+
+
 def _mock_followup(plan: Plan, question: str) -> str:
+    """Intent-aware mock that reasons from the plan's actual data.
+    Never fabricates signals the plan didn't use."""
+
     if not plan.windows:
-        return "The plan doesn't have any time windows yet, so I can't reason about it."
+        return "The plan has no recommended windows yet, so I can't reason about it."
+
     first = plan.windows[0]
-    mention = first.zone.replace("_", " ").title()
+    best = max(plan.windows, key=lambda w: w.expected_nett_rm)
+    total = sum(w.expected_nett_rm for w in plan.windows)
+    signals = plan.signals_used or []
+
+    def zone_pretty(zone: str) -> str:
+        return zone.replace("_", " ").title()
+
+    intent = _detect_intent(question)
+
+    mock_tag = " (Mock reasoning — no Z.AI key configured.)"
+
+    if intent == "why":
+        rationales = [w.rationale for w in plan.windows if w.rationale][:2]
+        rationale_text = " ".join(rationales) if rationales else "No per-window rationale was produced."
+        return (
+            f"The plan's overall reasoning: {plan.reasoning} "
+            f"Per-window: {rationale_text}"
+            + mock_tag
+        )
+
+    if intent == "confidence":
+        drivers = [s for s in signals if s.startswith(("history:", "weather:", "event:"))][:3]
+        explained = ", ".join(drivers) if drivers else "limited signals"
+        return (
+            f"Confidence is {plan.confidence}/100. The main drivers are: {explained}. "
+            f"Lower confidence usually means sparse history for the recommended slots."
+            + mock_tag
+        )
+
+    if intent == "weather":
+        weather_signals = [s for s in signals if s.startswith("weather:")]
+        if weather_signals:
+            tag = weather_signals[0].split(":", 1)[1].replace("_", " ")
+            return (
+                f"Weather today is {tag}. That's why the plan biases toward covered pickup zones "
+                f"(malls, transit hubs) and platforms where your historical rain-day earnings held up."
+                + mock_tag
+            )
+        return "Weather signals aren't in the plan's used_signals list." + mock_tag
+
+    if intent == "fuel":
+        fuel_signals = [s for s in signals if s.startswith("fuel:")]
+        if fuel_signals:
+            return (
+                f"Fuel signal used: {fuel_signals[0]}. The plan tilts toward shorter trips and "
+                f"high RM-per-km zones when fuel is expensive — net, not gross, is what matters."
+                + mock_tag
+            )
+        return "Fuel wasn't a deciding factor in this plan." + mock_tag
+
+    if intent == "safety":
+        warnings = plan.warnings or []
+        if warnings:
+            return f"Flagged warnings: {', '.join(warnings)}. Inspect them before acting." + mock_tag
+        return (
+            "No safety warnings on this plan. Still, always respect your own fatigue and local advisories."
+            + mock_tag
+        )
+
+    if intent == "compare_zone":
+        return (
+            f"The plan ranks {zone_pretty(best.zone)} at {best.start.strftime('%H:%M')} on "
+            f"{best.platform.value} as the highest-expected slot ({best.expected_nett_rm:.0f} RM). "
+            f"Zones NOT in the plan are either outside the whitelist or scored worse on the "
+            f"signals ({', '.join(signals[:3]) or 'n/a'})."
+            + mock_tag
+        )
+
+    if intent == "when":
+        times = [f"{w.start.strftime('%H:%M')}–{w.end.strftime('%H:%M')}" for w in plan.windows]
+        return (
+            f"Recommended slots: {', '.join(times)}. Peak expected earnings in "
+            f"{best.start.strftime('%H:%M')}–{best.end.strftime('%H:%M')} "
+            f"({best.expected_nett_rm:.0f} RM)."
+            + mock_tag
+        )
+
+    if intent == "platform":
+        platform_counts: dict[str, int] = {}
+        for w in plan.windows:
+            platform_counts[w.platform.value] = platform_counts.get(w.platform.value, 0) + 1
+        picks = ", ".join(f"{k} ({v})" for k, v in platform_counts.items())
+        return (
+            f"Platforms in this plan: {picks}. Selection is driven by your best_platform_per_hour "
+            f"history — the app with the highest per-hour nett at that hour wins."
+            + mock_tag
+        )
+
+    if intent == "zone":
+        zones = ", ".join({zone_pretty(w.zone) for w in plan.windows})
+        return (
+            f"Recommended zones: {zones}. All are in the Klang Valley whitelist; the plan will never "
+            f"suggest a zone outside it (hard rule in the prompt)."
+            + mock_tag
+        )
+
+    if intent == "earnings":
+        return (
+            f"Projected total nett for the full plan: {total:.0f} RM across {len(plan.windows)} slots. "
+            f"Best single slot: {zone_pretty(best.zone)} at {best.start.strftime('%H:%M')} "
+            f"({best.expected_nett_rm:.0f} RM on {best.platform.value})."
+            + mock_tag
+        )
+
+    # general fallback
     return (
-        f"Short answer: the plan already prioritises {mention} during {first.start.strftime('%H:%M')}-"
-        f"{first.end.strftime('%H:%M')} on {first.platform.value}. "
-        f"Confidence is {plan.confidence}/100. "
-        f"(Mock reasoning because no Z.AI key is configured — the real engine will give a signal-level "
-        f"answer to: '{question[:80]}')"
+        f"Short answer based on your plan: first slot is {zone_pretty(first.zone)} "
+        f"at {first.start.strftime('%H:%M')} on {first.platform.value}. "
+        f"Signals driving the plan: {', '.join(signals[:4]) or 'none recorded'}. "
+        f"Ask me something more specific (why / when / which platform / earnings / weather / fuel / safety)."
+        + mock_tag
     )
 
 

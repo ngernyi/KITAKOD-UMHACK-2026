@@ -44,13 +44,40 @@ def ask_followup(plan_id: str, question: str) -> dict:
         return {"error": "plan_not_found", "plan_id": plan_id}
 
     answer = glm_service.ask_followup(plan, question)
-    _persist_followup(plan_id, question, answer)
+    asked_at = datetime.now(timezone.utc).isoformat()
+    turn_id = _persist_followup(plan_id, question, answer, asked_at)
     return {
+        "id": turn_id,
         "plan_id": plan_id,
         "question": question,
         "answer": answer,
+        "asked_at": asked_at,
         "signals_referenced": plan.signals_used,
     }
+
+
+def list_followups(plan_id: str) -> list[dict]:
+    db_path = current_app.config["DB_PATH"]
+    with get_conn(db_path) as conn:
+        rows = conn.execute(
+            """
+            SELECT id, question, answer, asked_at
+            FROM followups
+            WHERE plan_id = ?
+            ORDER BY asked_at ASC
+            """,
+            (plan_id,),
+        ).fetchall()
+    return [
+        {
+            "id": r["id"],
+            "plan_id": plan_id,
+            "question": r["question"],
+            "answer": r["answer"],
+            "asked_at": r["asked_at"],
+        }
+        for r in rows
+    ]
 
 
 def _persist_plan(plan: Plan) -> None:
@@ -88,13 +115,14 @@ def _load_plan(plan_id: str) -> Optional[Plan]:
         return Plan.model_validate_json(row["plan_json"])
 
 
-def _persist_followup(plan_id: str, question: str, answer: str) -> None:
+def _persist_followup(plan_id: str, question: str, answer: str, asked_at: str) -> int:
     db_path = current_app.config["DB_PATH"]
     with get_conn(db_path) as conn:
-        conn.execute(
+        cursor = conn.execute(
             """
             INSERT INTO followups (plan_id, question, answer, asked_at)
             VALUES (?, ?, ?, ?)
             """,
-            (plan_id, question, answer, datetime.now(timezone.utc).isoformat()),
+            (plan_id, question, answer, asked_at),
         )
+        return cursor.lastrowid or 0

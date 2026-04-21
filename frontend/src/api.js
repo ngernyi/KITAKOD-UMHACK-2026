@@ -73,6 +73,9 @@ export const api = {
       body: { plan_id: planId, question },
     }),
 
+  listFollowups: (planId) =>
+    request(`/plan/${encodeURIComponent(planId)}/followups`),
+
   uploadEarnings: ({ platform, rows, csvText, driverId = 'local' }) =>
     request('/earnings/upload', {
       method: 'POST',

@@ -5,6 +5,7 @@ import PageHeader from '../components/PageHeader.jsx';
 import WindowPicker from '../components/WindowPicker.jsx';
 import PlanView from '../components/PlanView.jsx';
 import Notice from '../components/Notice.jsx';
+import ExternalDataPanel from '../components/ExternalDataPanel.jsx';
 import './PlanPage.css';
 
 /**
@@ -68,6 +69,8 @@ export default function PlanPage() {
       />
 
       <PersonalisationBanner profile={profile} totals={totals} />
+
+      <ExternalDataPanel expanded={!plan} />
 
       <WindowPicker onSubmit={handleGenerate} loading={loading} />
 

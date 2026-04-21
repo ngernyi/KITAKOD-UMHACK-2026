@@ -161,6 +161,12 @@ def ask_followup_route():
     return jsonify(result)
 
 
+@bp.route("/plan/<plan_id>/followups", methods=["GET"])
+def list_followups_route(plan_id: str):
+    turns = plan_service.list_followups(plan_id)
+    return jsonify({"plan_id": plan_id, "followups": turns})
+
+
 # ---------- Backtest ----------
 
 @bp.route("/backtest/run", methods=["POST"])

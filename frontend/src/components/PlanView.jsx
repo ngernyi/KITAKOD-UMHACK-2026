@@ -1,3 +1,4 @@
+import FollowupPanel from './FollowupPanel.jsx';
 import PlanCard from './PlanCard.jsx';
 import SignalChip from './SignalChip.jsx';
 import { formatDateTime, formatRm } from '../lib/format.js';
@@ -79,6 +80,8 @@ export default function PlanView({ plan }) {
           </div>
         </section>
       ) : null}
+
+      <FollowupPanel planId={plan.plan_id} />
 
       <footer className="planview__footer">
         <span>Plan ID: <code>{plan.plan_id.slice(0, 8)}</code></span>
