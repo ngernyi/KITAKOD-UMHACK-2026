@@ -9,7 +9,7 @@ from __future__ import annotations
 import logging
 from datetime import datetime, timezone
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, Response, jsonify, request
 from pydantic import ValidationError
 
 from app.models import DriverProfile, Platform
@@ -71,8 +71,38 @@ def upload_earnings():
         upload = TripUpload.model_validate(data)
     except ValidationError as exc:
         return jsonify({"error": "validation_error", "details": exc.errors()}), 400
-    result = earnings_service.ingest(upload)
+    try:
+        result = earnings_service.ingest(upload)
+    except Exception as exc:
+        log.exception("earnings.ingest failed")
+        return jsonify({"error": "ingest_failed", "detail": str(exc)}), 500
     return jsonify(result.to_dict())
+
+
+@bp.route("/earnings/template", methods=["GET"])
+def earnings_template():
+    platform_raw = request.args.get("platform", "grab")
+    try:
+        platform = Platform(platform_raw)
+    except ValueError:
+        return jsonify({"error": "bad_platform"}), 400
+    csv_text = earnings_service.csv_template(platform)
+    filename = f"gigshift_earnings_template_{platform.value}.csv"
+    return Response(
+        csv_text,
+        mimetype="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@bp.route("/earnings/totals", methods=["GET"])
+def earnings_totals():
+    driver_id = request.args.get("driver_id", "local")
+    try:
+        days = int(request.args.get("days", "14"))
+    except ValueError:
+        return jsonify({"error": "bad_days_param"}), 400
+    return jsonify(earnings_service.totals(driver_id=driver_id, days=days))
 
 
 @bp.route("/analytics/summary", methods=["GET"])

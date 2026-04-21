@@ -53,6 +53,8 @@ export const api = {
   health: () => request('/health'),
 
   getProfile: () => request('/profile'),
+  saveProfile: (profile) =>
+    request('/profile', { method: 'PUT', body: profile }),
 
   getSignalsToday: (dateIso) =>
     request(`/external/today${dateIso ? `?date=${dateIso}` : ''}`),
@@ -81,4 +83,52 @@ export const api = {
         driver_id: driverId,
       },
     }),
+
+  getEarningsTotals: (days = 14) =>
+    request(`/earnings/totals?days=${days}`),
+
+  earningsTemplateUrl: (platform = 'grab') =>
+    `/api/earnings/template?platform=${encodeURIComponent(platform)}`,
 };
+
+/** Options lists shared across pages. Keep in sync with backend enums. */
+export const PLATFORMS = [
+  { id: 'grab', label: 'Grab' },
+  { id: 'maxim', label: 'Maxim' },
+  { id: 'airasia_ride', label: 'AirAsia Ride' },
+  { id: 'indrive', label: 'inDrive' },
+];
+
+export const VEHICLE_TYPES = [
+  { id: 'car', label: 'Car' },
+  { id: 'motorbike', label: 'Motorbike' },
+];
+
+export const FUEL_TYPES = [
+  { id: 'ron95', label: 'RON95' },
+  { id: 'ron97', label: 'RON97' },
+  { id: 'diesel', label: 'Diesel' },
+  { id: 'ev', label: 'EV (electric)' },
+];
+
+/** Zone ids - keep in sync with backend/data/zones_kl.json. */
+export const ZONES = [
+  { id: 'klcc', label: 'KLCC' },
+  { id: 'bukit_bintang', label: 'Bukit Bintang' },
+  { id: 'bangsar', label: 'Bangsar / Bangsar South' },
+  { id: 'mid_valley', label: 'Mid Valley / KL Sentral' },
+  { id: 'sunway', label: 'Sunway Pyramid / Bandar Sunway' },
+  { id: 'petaling_jaya_ss2', label: 'PJ SS2 / Damansara' },
+  { id: 'subang_jaya', label: 'Subang Jaya' },
+  { id: 'puchong', label: 'Puchong / IOI Mall' },
+  { id: 'cheras', label: 'Cheras' },
+  { id: 'setapak_wangsa_maju', label: 'Setapak / Wangsa Maju' },
+  { id: 'ampang', label: 'Ampang' },
+  { id: 'kepong', label: 'Kepong' },
+  { id: 'klia_klia2', label: 'KLIA / KLIA2' },
+  { id: 'shah_alam', label: 'Shah Alam' },
+  { id: 'klang', label: 'Klang' },
+  { id: 'cyberjaya_putrajaya', label: 'Cyberjaya / Putrajaya' },
+  { id: 'mont_kiara_sri_hartamas', label: 'Mont Kiara / Sri Hartamas' },
+  { id: 'kota_damansara', label: 'Kota Damansara / TTDI' },
+];

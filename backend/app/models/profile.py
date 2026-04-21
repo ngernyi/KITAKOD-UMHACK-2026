@@ -42,8 +42,20 @@ class DriverProfile(BaseModel):
         default_factory=lambda: [Platform.GRAB, Platform.MAXIM, Platform.AIRASIA, Platform.INDRIVE]
     )
     vehicle_fuel_consumption_l_per_100km: float = Field(default=7.5, ge=0.1, le=30.0)
+    preferences: str = Field(
+        default="",
+        max_length=500,
+        description=(
+            "Free-text driver preferences passed to the GLM (e.g. 'avoid KLIA after 22:00, "
+            "prefer short-distance trips, no heavy rain zones'). Clipped at 500 chars."
+        ),
+    )
 
     def is_default(self) -> bool:
         """Whether this is a stock default profile (no user edits yet)."""
 
-        return self.driver_id == "local" and self.display_name == "Driver"
+        return (
+            self.driver_id == "local"
+            and self.display_name == "Driver"
+            and self.preferences == ""
+        )

@@ -290,7 +290,7 @@ def _mock_plan(
         confidence -= 10
 
     reasoning = _mock_reasoning(signals, analytics, profile)
-    signals_used = _mock_signals_used(signals, analytics)
+    signals_used = _mock_signals_used(signals, analytics, profile)
 
     return Plan(
         plan_id=str(uuid.uuid4()),
@@ -348,10 +348,19 @@ def _mock_reasoning(signals: DailySignals, analytics: AnalyticsSummary, profile:
     parts.append(
         f"Plan favours your usual platforms: {', '.join(p.value for p in profile.platforms[:2])}."
     )
+    if profile.preferences:
+        snippet = profile.preferences.strip().replace("\n", " ")
+        if len(snippet) > 80:
+            snippet = snippet[:77] + "..."
+        parts.append(f'Respecting your preferences: "{snippet}".')
     return " ".join(parts)
 
 
-def _mock_signals_used(signals: DailySignals, analytics: AnalyticsSummary) -> list[str]:
+def _mock_signals_used(
+    signals: DailySignals,
+    analytics: AnalyticsSummary,
+    profile: Optional[DriverProfile] = None,
+) -> list[str]:
     used: list[str] = []
     if signals.weather:
         used.append(f"weather:{signals.weather.condition.replace(' ', '_')}")
@@ -366,6 +375,8 @@ def _mock_signals_used(signals: DailySignals, analytics: AnalyticsSummary) -> li
         used.append(f"history:top_zone_{analytics.by_zone[0].zone}")
     if analytics.by_hour:
         used.append(f"history:hourly_peaks")
+    if profile and profile.preferences:
+        used.append("preferences:driver_freetext")
     return used
 
 
