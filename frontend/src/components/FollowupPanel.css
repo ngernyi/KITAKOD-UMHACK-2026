@@ -197,3 +197,26 @@
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+@media (max-width: 560px) {
+  .fup {
+    padding: var(--space-4);
+  }
+  .fup__bubble {
+    max-width: 100%;
+  }
+  .fup__suggestions {
+    gap: var(--space-1);
+  }
+  .fup__suggestion {
+    font-size: 12px;
+    padding: 6px 10px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fup__typing span {
+    animation: none;
+    opacity: 0.6;
+  }
+}

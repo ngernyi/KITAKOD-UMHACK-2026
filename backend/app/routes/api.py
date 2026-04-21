@@ -59,7 +59,9 @@ def put_profile_route():
     except ValidationError as exc:
         return jsonify({"error": "validation_error", "details": exc.errors()}), 400
     upsert_profile(profile)
-    return jsonify({"ok": True, "driver_id": profile.driver_id})
+    # Return the saved profile so clients don't need a second GET
+    # to refresh local state (and so smoke tests can assert round-trip).
+    return jsonify(get_profile(profile.driver_id).model_dump(mode="json"))
 
 
 # ---------- Earnings ----------

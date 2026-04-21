@@ -132,7 +132,12 @@ export default function FollowupPanel({ planId }) {
         </div>
       ) : null}
 
-      <ol className="fup__thread">
+      <ol
+        className="fup__thread"
+        aria-live="polite"
+        aria-relevant="additions text"
+        aria-busy={loading}
+      >
         {turns.map((t) => (
           <li key={t.id} className="fup__turn">
             <div className="fup__bubble fup__bubble--q">

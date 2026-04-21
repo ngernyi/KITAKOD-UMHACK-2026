@@ -24,6 +24,12 @@
   background: var(--slate-100);
 }
 
+.edp__header:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: -2px;
+  background: var(--slate-100);
+}
+
 .edp__header-left {
   display: flex;
   flex-direction: column;
@@ -269,4 +275,24 @@
   color: var(--text-muted);
   line-height: 1.5;
   margin-top: 4px;
+}
+
+@media (max-width: 560px) {
+  .edp__header {
+    padding: var(--space-3) var(--space-4);
+  }
+  .edp__sub {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+  }
+  .edp__body {
+    grid-template-columns: 1fr;
+    padding: 0 var(--space-4) var(--space-4);
+  }
+  .edp-event__primary {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+  }
 }
