@@ -166,14 +166,24 @@ def ask_followup_route():
 @bp.route("/backtest/run", methods=["POST"])
 def backtest_route():
     data = request.get_json(silent=True) or {}
+    window_raw = data.get("window") or {}
     try:
-        weeks = int(data.get("weeks", 4))
-    except (TypeError, ValueError):
-        return jsonify({"error": "bad_weeks"}), 400
-    if not (1 <= weeks <= 8):
-        return jsonify({"error": "weeks_out_of_range"}), 400
+        window = TimeWindow.model_validate(window_raw)
+    except ValidationError as exc:
+        return jsonify({"error": "validation_error", "details": exc.errors()}), 400
+
+    # Guard: backtest windows longer than 31 days get expensive (one
+    # GLM call per day). Cap it.
+    span_days = (window.end - window.start).days
+    if span_days > 31:
+        return jsonify({"error": "window_too_long", "max_days": 31}), 400
+
     driver_id = data.get("driver_id", "local")
-    result = backtest_service.run_backtest(weeks=weeks, driver_id=driver_id)
+    try:
+        result = backtest_service.run_backtest(window=window, driver_id=driver_id)
+    except Exception as exc:
+        log.exception("backtest failed")
+        return jsonify({"error": "backtest_failed", "detail": str(exc)}), 500
     return jsonify(result.model_dump(mode="json"))
 
 

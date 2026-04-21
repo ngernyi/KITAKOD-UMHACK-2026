@@ -35,3 +35,15 @@ export function defaultShiftWindow(now = new Date()) {
   end.setHours(23, 0, 0, 0);
   return { start, end };
 }
+
+/**
+ * Default backtest window: last 7 full days, ending at local midnight today.
+ * Using days-only granularity keeps the UX simple - one replay per calendar day.
+ */
+export function defaultBacktestWindow(now = new Date()) {
+  const end = new Date(now);
+  end.setHours(0, 0, 0, 0);
+  const start = new Date(end);
+  start.setDate(start.getDate() - 7);
+  return { start, end };
+}

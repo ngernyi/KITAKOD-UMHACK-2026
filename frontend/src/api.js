@@ -89,6 +89,12 @@ export const api = {
 
   earningsTemplateUrl: (platform = 'grab') =>
     `/api/earnings/template?platform=${encodeURIComponent(platform)}`,
+
+  runBacktest: ({ start, end, driverId = 'local' }) =>
+    request('/backtest/run', {
+      method: 'POST',
+      body: { driver_id: driverId, window: { start, end } },
+    }),
 };
 
 /** Options lists shared across pages. Keep in sync with backend enums. */

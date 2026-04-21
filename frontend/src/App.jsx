@@ -4,6 +4,7 @@ import PlanPage from './pages/PlanPage.jsx';
 import EarningsPage from './pages/EarningsPage.jsx';
 import DashboardPage from './pages/DashboardPage.jsx';
 import ProfilePage from './pages/ProfilePage.jsx';
+import BacktestPage from './pages/BacktestPage.jsx';
 import NotFoundPage from './pages/NotFoundPage.jsx';
 import './App.css';
 
@@ -18,6 +19,7 @@ export default function App() {
             <Route path="/" element={<PlanPage />} />
             <Route path="/earnings" element={<EarningsPage />} />
             <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/backtest" element={<BacktestPage />} />
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="*" element={<NotFoundPage />} />
           </Routes>

@@ -15,7 +15,7 @@ from app.models.analytics import (
     AnalyticsSummary,
 )
 from app.models.plan import PlanWindow, Plan, FollowupTurn
-from app.models.backtest import BacktestDay, BacktestResult
+from app.models.backtest import BacktestDay, BacktestResult, BacktestSlotProjection
 
 __all__ = [
     "Platform",
@@ -38,4 +38,5 @@ __all__ = [
     "FollowupTurn",
     "BacktestDay",
     "BacktestResult",
+    "BacktestSlotProjection",
 ]
