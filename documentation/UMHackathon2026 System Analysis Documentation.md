@@ -117,8 +117,8 @@ Token budgets are enforced at two layers:
 | Web Client | Backend API | `GET /api/external/today` | Fetch today's external signals for the transparency panel. |
 | Web Client | Backend API | `POST /api/backtest/run` | Run the backtest over a historical window. |
 | Web Client | Backend API | `GET/PUT /api/profile` | Read/update driver profile. |
-| Backend API (GLM Service) | Z.AI GLM | `POST <ZAI_API_URL>/chat` | Plan generation and follow-up Q&A (chat-completion with messages array). |
-| Backend API (External Data Service) | OpenWeather API | `GET /data/2.5/forecast?q=Kuala+Lumpur` | Weather forecast for the shift day. |
+| Backend API (GLM Service) | Z.AI GLM | `POST {ZAI_API_URL}/chat/completions` (base URL from env; default `https://api.z.ai/v1`) | Plan generation and follow-up Q&A (OpenAI-style chat completions with a `messages` array). |
+| Backend API (External Data Service) | OpenWeather API (optional) | `GET /data/2.5/forecast?q=Kuala+Lumpur` | Weather forecast for the shift day when `OPENWEATHER_API_KEY` is set; otherwise seeded weather JSON. |
 | Backend API (External Data Service) | Public Holidays (Calendarific or seeded) | `GET /api/v2/holidays?country=MY&year=2026` | Public holiday calendar. |
 | Backend API (External Data Service) | MOF weekly RON95/diesel (seeded JSON for MVP) | — | Fuel price for the week. |
 | Backend API (External Data Service) | Seeded events JSON | — | Curated KL events (concerts, matches, expos) for the demo window. |
@@ -138,7 +138,7 @@ Token budgets are enforced at two layers:
 | 5 | | Plan Service → Earnings Service | `get_trips(driver_id, last_days=14)` |
 | 6 | | Plan Service → Analytics Service | `summarise(trips)` → produces `AnalyticsSummary` |
 | 7 | | Plan Service → External Data Service | `get_daily_signals(date=window.date, city="KL")` |
-| 8 | | External Data Service | Returns cached signals if <24h old; otherwise fetches OpenWeather + holidays + reads seeded fuel/events JSON; caches result. |
+| 8 | | External Data Service | Returns cached signals if less than 24h old in `daily_signals`; otherwise builds `DailySignals` from seeded JSON under `backend/data/*` (current preliminary build). When `OPENWEATHER_API_KEY` is set, live OpenWeather can replace seeded weather; result is cached 24h. |
 | 9 | | Plan Service → GLM Service | `glm_service.generate_plan(context=PlanContext(...))` |
 | 10 | | GLM Service | Builds system + few-shot + user messages; enforces token budget; calls Z.AI GLM (or mock if no key). |
 | 11 | | Z.AI GLM | Processes and returns JSON with `windows[]`, `confidence`, `reasoning`, `signals_used[]`. |
@@ -199,16 +199,16 @@ Token budgets are enforced at two layers:
 The system has four canonical data flows. Each is designed to keep the **GLM's token budget small** (by pre-aggregating in Python) and to keep the **frontend dumb** (all intelligence server-side).
 
 1. **Upload flow (driver provides earnings).**
-   Driver pastes / uploads CSV → Frontend `POST /api/earnings/upload { platform, payload }` → Backend `earnings_service.ingest()` → per-platform parser → canonical `Trip` schema (`id, platform, start_ts, end_ts, start_zone, end_zone, distance_km, gross_rm, commission_rm, nett_rm, tip_rm, surge_multiplier`) → SQLite `trips` table → returns `{ rows_inserted, date_range }` to UI.
+   Driver pastes / uploads CSV → Frontend `POST /api/earnings/upload` with a `TripUpload` body (`platform`, optional `driver_id`, and `csv_text` or `rows`) → Backend `earnings_service.ingest()` → per-platform parser → canonical `Trip` records → SQLite `trips` table → returns `{ rows_inserted, duplicates_skipped, rows_rejected, rejection_reasons, date_range, warnings }` to UI.
 
 2. **Plan generation flow (core GLM interaction).**
-   Driver requests plan → Frontend `POST /api/plan/generate { window }` → Backend Plan Service orchestrates: (a) read driver profile from DS1, (b) read last-14-day trips from DS2, (c) analytics aggregation in Python, (d) external signals for the shift date from DS3 or live fetch (cached 24h), (e) build typed `PlanContext`, (f) call `glm_service.generate_plan(context)` which assembles messages and POSTs to Z.AI, (g) parse + validate JSON, (h) persist plan in DS4, (i) return plan → Frontend renders `PlanCard`.
+   Driver requests plan → Frontend `POST /api/plan/generate { driver_id, window: { start, end } }` → Backend Plan Service orchestrates: (a) read driver profile from DS1, (b) read last-14-day trips from DS2, (c) analytics aggregation in Python, (d) external signals for the shift date from DS3 (seeded-first implementation; optional live weather when configured), (e) build typed `PlanContext`, (f) call `glm_service.generate_plan(context)` which assembles messages and POSTs to Z.AI, (g) parse + validate JSON, (h) persist plan in DS4, (i) return plan → Frontend renders `PlanCard`.
 
 3. **Follow-up Q&A flow.**
    Driver types question → Frontend `POST /api/plan/ask { plan_id, question }` → Backend Plan Service loads prior plan from DS4 → `glm_service.ask_followup(plan, question)` → Z.AI GLM returns answer text → persist in DS5 → return to UI → appended to the conversation.
 
 4. **Backtest flow.**
-   Driver clicks "Run backtest (last 4 weeks)" → Frontend `POST /api/backtest/run { weeks: 4 }` → Backend Backtest Service iterates over each historical day, reconstructs the context **as it would have been that day** (same profile, trips up to D-1, signals for D), calls Plan Service (with reduced temperature for determinism), compares the plan's recommended zones/platforms to the driver's actual highest-earning zones/platforms that day, computes RM delta → aggregates into a summary `{ total_actual_rm, total_if_followed_rm, delta_rm, delta_pct, per_day: [...] }` → UI renders chart + headline metric.
+   Driver picks a historical date range (max 31 days) → Frontend `POST /api/backtest/run { driver_id, window: { start, end } }` → Backend Backtest Service iterates over each day in the window, reconstructs the context **as it would have been that day** (trips strictly before *d* for rate matrices; no leakage), runs the projection logic documented in the Backtest page (same-hours vs full-plan), aggregates RM deltas → returns a structured result (`BacktestResult` in code) → UI renders chart + headline metrics and per-slot `rate_source` badges.
 
 ---
 

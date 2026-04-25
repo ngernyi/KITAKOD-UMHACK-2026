@@ -2,7 +2,7 @@
 
 **Branch:** `feature/driver-copilot`
 **Hackathon:** UMHackathon 2026 — Domain 2: AI for Economic Empowerment & Decision Intelligence
-**Status:** Preliminary round — documentation complete, implementation in progress
+**Status:** Preliminary round — PRD/SAD/QATD complete; **GigShift MVP implemented** on this branch (end-to-end demoable with mock GLM and seeded external signals). Live OpenWeather / holiday APIs are wired for later (keys optional; see `external_data_service.py`).
 
 ---
 
@@ -74,11 +74,13 @@ If a feature doesn't help Ahmad make a better shift decision today, it doesn't s
                                   └───────────┬────────────┘
                                               │
                                               ▼
- External APIs (cached 24h)       ┌────────────────────────┐
- - OpenWeather                    │                        │
- - Public holidays API            │   External Data        │
- - MOF fuel price (seeded)   ──▶  │   Service              │
- - Seeded KL events               │                        │
+ Signals (24h cache design)       ┌────────────────────────┐
+ - Weather (OpenWeather when      │                        │
+   key set; else seeded JSON)     │   External Data        │
+ - Holidays / school breaks       │   Service              │
+   (seeded JSON for demo)    ──▶  │                        │
+ - MOF-style fuel (seeded)        │                        │
+ - KL events (seeded)             │                        │
                                   └───────────┬────────────┘
                                               │
                                               ▼
@@ -213,4 +215,5 @@ If you are reviewing for the judging rubric: jump to PRD §3 (Product Purpose), 
 
 | Version | Date | Change |
 |---|---|---|
+| 0.1.1 | 2026-04-26 | Doc hub aligned with `feature/driver-copilot` implementation: MVP shipped status, external-data diagram matches seeded-first + optional live APIs. |
 | 0.1.0 | 2026-04-19 | Initial documentation set for GigShift MVP: PRD, SAD, QATD committed. Documentation folder reorganised (samples moved to `sample/`). README created. |

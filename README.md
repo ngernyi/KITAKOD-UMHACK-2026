@@ -229,14 +229,21 @@ Design principles the codebase follows:
 ```dotenv
 # Optional — leave empty to use the deterministic signal-aware mock.
 ZAI_API_KEY=
-ZAI_API_URL=https://api.z.ai/api/paas/v4/chat/completions
+# Base URL only; the client appends /chat/completions (see glm_service.py).
+ZAI_API_URL=https://api.z.ai/v1
 
-# SQLite path (default: backend/gigshift.db)
-DB_PATH=gigshift.db
+# Optional — OpenWeather; empty => seeded weather in daily signals.
+OPENWEATHER_API_KEY=
+
+# SQLite path (default: backend/gigshift.db if unset)
+GIGSHIFT_DB_PATH=
 
 # Flask
 FLASK_ENV=development
+FLASK_DEBUG=1
 ```
+
+Copy from `backend/.env.example` for the authoritative list.
 
 ---
 
