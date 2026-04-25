@@ -1,0 +1,93 @@
+.sidebar {
+  width: 240px;
+  height: 100vh;
+  background: #1a1a2e;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  left: 0;
+  top: 0;
+}
+
+.sidebar-header {
+  padding: 24px 20px;
+  border-bottom: 1px solid #16213e;
+}
+
+.sidebar-header h2 {
+  margin: 0;
+  font-size: 28px;
+  color: #e94560;
+}
+
+.sidebar-header p {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: #8b8b9e;
+}
+
+.sidebar-nav {
+  flex: 1;
+  padding: 16px 0;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  padding: 14px 20px;
+  color: #8b8b9e;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.nav-item:hover {
+  background: #16213e;
+  color: #fff;
+}
+
+.nav-item.active {
+  background: #e94560;
+  color: #fff;
+}
+
+.nav-icon {
+  margin-right: 12px;
+  font-size: 18px;
+}
+
+.nav-label {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.sidebar-footer {
+  padding: 16px 20px;
+  border-top: 1px solid #16213e;
+}
+
+.status-indicator {
+  display: flex;
+  align-items: center;
+  font-size: 12px;
+  color: #8b8b9e;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 8px;
+}
+
+.status-dot.ok {
+  background: #4ade80;
+}
+
+.status-dot.offline {
+  background: #ef4444;
+}
+
+.status-dot.checking {
+  background: #fbbf24;
+}

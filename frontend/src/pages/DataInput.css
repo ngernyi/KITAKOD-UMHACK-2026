@@ -1,0 +1,298 @@
+.data-input {
+  width: 100%;
+}
+
+/* Tier Selector */
+.tier-selector {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.tier-btn {
+  flex: 1;
+  background: #1a1a2e;
+  border: 2px solid #2d2d4a;
+  border-radius: 12px;
+  padding: 16px;
+  color: #8b8b9e;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+}
+
+.tier-btn:hover {
+  border-color: #e94560;
+  color: #fff;
+}
+
+.tier-btn.active {
+  background: rgba(233, 69, 96, 0.1);
+  border-color: #e94560;
+  color: #fff;
+}
+
+.tier-btn .tier-label {
+  font-size: 16px;
+  font-weight: 600;
+  color: inherit;
+  display: block;
+}
+
+.tier-btn .tier-data {
+  font-size: 12px;
+  color: #8b8b9e;
+  margin-top: 4px;
+}
+
+.tier-btn .tier-desc {
+  font-size: 11px;
+  color: #666;
+  margin-top: 2px;
+}
+
+.tier-btn.active .tier-data {
+  color: #e94560;
+}
+
+/* Data Tabs */
+.data-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+  background: #1a1a2e;
+  border-radius: 12px;
+  padding: 8px;
+  flex-wrap: wrap;
+}
+
+.tab {
+  background: transparent;
+  border: none;
+  padding: 12px 20px;
+  color: #8b8b9e;
+  font-size: 14px;
+  cursor: pointer;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+}
+
+.tab:hover {
+  color: #fff;
+}
+
+.tab.active {
+  background: #e94560;
+  color: #fff;
+}
+
+.tab-count {
+  background: rgba(255, 255, 255, 0.2);
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+}
+
+.tab.active .tab-count {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.upload-btn {
+  margin-left: auto;
+  background: #2d2d4a;
+}
+
+.upload-btn:hover {
+  background: #3d3d5a;
+}
+
+/* Content */
+.data-content {
+  background: #1a1a2e;
+  border-radius: 12px;
+  padding: 24px;
+}
+
+.input-form h3 {
+  margin: 0 0 20px;
+  font-size: 16px;
+  color: #fff;
+}
+
+/* Form */
+.form-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.form-row input,
+.form-row select {
+  flex: 1;
+  min-width: 100px;
+  padding: 12px 16px;
+  background: #0f0f1a;
+  border: 1px solid #2d2d4a;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 14px;
+}
+
+.form-row input:focus,
+.form-row select:focus {
+  outline: none;
+  border-color: #e94560;
+}
+
+.form-row input::placeholder {
+  color: #8b8b9e;
+}
+
+.form-row select {
+  cursor: pointer;
+}
+
+.form-row select option {
+  background: #0f0f1a;
+}
+
+.add-btn {
+  padding: 12px 24px;
+  background: #e94560;
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.add-btn:hover {
+  background: #d13a54;
+}
+
+/* Table */
+.data-table {
+  overflow-x: auto;
+}
+
+.data-table table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.data-table th {
+  text-align: left;
+  padding: 12px 16px;
+  color: #8b8b9e;
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid #2d2d4a;
+}
+
+.data-table td {
+  padding: 14px 16px;
+  color: #fff;
+  font-size: 14px;
+  border-bottom: 1px solid #2d2d4a;
+}
+
+.data-table tr:hover td {
+  background: rgba(233, 69, 96, 0.05);
+}
+
+.data-table .empty {
+  text-align: center;
+  color: #8b8b9e;
+  padding: 40px;
+}
+
+/* Table Status Colors */
+.data-table td.positive,
+.data-table td.ok {
+  color: #4ade80;
+}
+
+.data-table td.negative,
+.data-table td.low {
+  color: #ef4444;
+}
+
+.data-table td.warning {
+  color: #fbbf24;
+}
+
+/* Data Summary */
+.data-summary {
+  background: #1a1a2e;
+  border-radius: 12px;
+  padding: 24px;
+  margin-top: 24px;
+}
+
+.data-summary h3 {
+  margin: 0 0 20px;
+  font-size: 16px;
+  color: #fff;
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 16px;
+}
+
+.summary-item {
+  background: #0f0f1a;
+  border-radius: 8px;
+  padding: 16px;
+  text-align: center;
+}
+
+.summary-item .label {
+  display: block;
+  font-size: 12px;
+  color: #8b8b9e;
+  margin-bottom: 4px;
+}
+
+.summary-item .value {
+  font-size: 24px;
+  color: #fff;
+  font-weight: 600;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .tier-selector {
+    flex-direction: column;
+  }
+  
+  .form-row {
+    flex-wrap: wrap;
+  }
+  
+  .form-row input,
+  .form-row select {
+    min-width: calc(50% - 6px);
+  }
+
+  .summary-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .data-tabs {
+    flex-wrap: wrap;
+  }
+
+  .tab {
+    flex: 1 1 auto;
+  }
+}
