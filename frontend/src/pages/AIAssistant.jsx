@@ -1,17 +1,99 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useApp } from '../context/AppContext';
+import { askAI, getWhatIf } from '../services/api';
 import './AIAssistant.css';
+
+const formatAnswer = (text) => {
+  if (!text) return [];
+
+  const blocks = [];
+  const lines = text.split('\n');
+  let currentList = [];
+  let listType = null;
+
+  const flushList = () => {
+    if (currentList.length > 0) {
+      blocks.push({ type: listType, items: [...currentList] });
+      currentList = [];
+      listType = null;
+    }
+  };
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+
+    if (trimmed.startsWith('### ')) {
+      flushList();
+      blocks.push({ type: 'heading', text: cleanMd(trimmed.slice(4)) });
+    } else if (trimmed.startsWith('## ')) {
+      flushList();
+      blocks.push({ type: 'heading', text: cleanMd(trimmed.slice(3)) });
+    } else if (trimmed.startsWith('**') && trimmed.endsWith('**') && !trimmed.includes(' ')) {
+      flushList();
+      blocks.push({ type: 'label', text: cleanMd(trimmed) });
+    } else if (trimmed.startsWith('- ') || trimmed.startsWith('* ') || trimmed.startsWith('• ')) {
+      if (listType !== 'unordered') flushList();
+      listType = 'unordered';
+      currentList.push(cleanMd(trimmed.slice(2)));
+    } else if (/^\d+\.\s/.test(trimmed)) {
+      if (listType !== 'ordered') flushList();
+      listType = 'ordered';
+      currentList.push(cleanMd(trimmed.replace(/^\d+\.\s/, '')));
+    } else if (trimmed === '') {
+      flushList();
+    } else {
+      flushList();
+      blocks.push({ type: 'paragraph', text: cleanMd(trimmed) });
+    }
+  }
+  flushList();
+
+  return blocks;
+};
+
+const cleanMd = (text) => {
+  return text
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    .replace(/`(.+?)`/g, '<code>$1</code>');
+};
+
+const RenderBlock = ({ block, idx }) => {
+  switch (block.type) {
+    case 'heading':
+      return <h4 className="answer-heading" key={idx}>{block.text}</h4>;
+    case 'label':
+      return <div className="answer-label" key={idx} dangerouslySetInnerHTML={{ __html: block.text }} />;
+    case 'paragraph':
+      return <p className="answer-paragraph" key={idx} dangerouslySetInnerHTML={{ __html: block.text }} />;
+    case 'unordered':
+      return (
+        <ul className="answer-list" key={idx}>
+          {block.items.map((item, i) => (
+            <li key={i} dangerouslySetInnerHTML={{ __html: item }} />
+          ))}
+        </ul>
+      );
+    case 'ordered':
+      return (
+        <ol className="answer-list ordered" key={idx}>
+          {block.items.map((item, i) => (
+            <li key={i} dangerouslySetInnerHTML={{ __html: item }} />
+          ))}
+        </ol>
+      );
+    default:
+      return null;
+  }
+};
 
 const AIAssistant = () => {
   const { isLoading, setIsLoading, internalData, config } = useApp();
   const [query, setQuery] = useState('');
   const [activeTab, setActiveTab] = useState('whatif');
-  const [history, setHistory] = useState([
-    { type: 'whatif', question: 'What if I raise prices by 10%?', answer: 'Based on your current margin of 30% and price elasticity, raising prices by 10% would increase profit by approximately RM800-1000/month. However, monitor for any drop in volume.', timestamp: '2026-04-19' },
-    { type: 'ask', question: 'Why are Tuesday sales always low?', answer: 'Tuesday typically has 40% lower foot traffic. This could be due to: 1) Mid-week routine 2) Competitor promotions on other days. Consider running Tuesday specials.', timestamp: '2026-04-18' }
-  ]);
+  const [history, setHistory] = useState([]);
+  const [error, setError] = useState(null);
 
-  // Check tier maturity
   const checkTierAccess = () => {
     const hasBasic = internalData.sales.length > 0 && internalData.expenses.length > 0;
     const hasIntermediate = internalData.products.length > 0 && internalData.inventory.length > 0;
@@ -43,48 +125,59 @@ const AIAssistant = () => {
     { q: 'What is my best seller?', desc: 'Top products' },
   ];
 
-  const generateResponse = (type, question) => {
-    if (type === 'whatif') {
-      const lowerQ = question.toLowerCase();
-      if (lowerQ.includes('raise price') || lowerQ.includes('increase price')) {
-        return `Based on your data:\n\n• Current margin: ~30%\n• Price increase 10% = ~RM800-1000/month extra profit\n• Risk: May lose some price-sensitive customers\n\nRecommendation: Try on high-margin items first (Power: 35%, Milo: 30%)`;
-      }
-      if (lowerQ.includes('hire') || lowerQ.includes('staff')) {
-        return `Based on your staff data:\n\n• Current staff cost: RM${internalData.staff.reduce((sum, s) => sum + (s.count * s.wage), 0)}/month\n• New hire: +RM1500/month\n• Break-even: Need RM{1500/0.3} more revenue/month\n\nRecommendation: Only hire if you can guarantee additional sales`;
-      }
-      if (lowerQ.includes('restock') || lowerQ.includes('inventory')) {
-        return `Analysis based on your inventory levels:\n\n• ${internalData.inventory.filter(i => i.quantity <= i.reorderLevel).length} items at reorder level\n• Lead time: 2-3 days typical\n\nRecommendation: Stock NOW for trending items (Milo +85%, Nescafe +72%)`;
-      }
-      return 'Based on your business data: This change would result in approximately X. Consider the trade-offs: Pros include improved margins, Cons include potential volume decrease.';
-    } else {
-      const lowerQ = question.toLowerCase();
-      if (lowerQ.includes('drop') || lowerQ.includes('low')) {
-        return `Analysis of your sales data:\n\n• Tuesday is your lowest day (-40% below avg)\n• Pattern: consistently low mid-week\n• External factors: Weather may affect foot traffic\n\nAction: Run Tuesday promotions to boost traffic`;
-      }
-      if (lowerQ.includes('stock') || lowerQ.includes('what')) {
-        return `Based on your data + Google Trends:\n\n• Milo: Trending +85% - STOCK NOW\n• Nescafe: Trending +72% - Order extra\n• Maggi: Stable - maintain current level\n\nRecommendation: Prioritize trending items`;
-      }
-      if (lowerQ.includes('profit') || lowerQ.includes('making')) {
-        const totalRevenue = internalData.sales.reduce((sum, s) => sum + (parseFloat(s.revenue) || 0), 0);
-        const totalExpenses = internalData.expenses.reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0);
-        const profit = totalRevenue - totalExpenses;
-        const margin = totalRevenue > 0 ? Math.round((profit / totalRevenue) * 100) : 0;
-        return `Your financial snapshot:\n\n• Revenue: RM${totalRevenue}\n• Expenses: RM${totalExpenses}\n• Profit: RM${profit} (${margin}%)\n\nStatus: ${margin >= 30 ? 'Healthy ✅' : margin >= 20 ? 'OK ⚠️' : 'Needs attention ❌'}`;
-      }
-      return 'Based on your business data: The analysis shows that sales patterns indicate moderate performance. Consider focusing on high-margin products and trending items.';
-    }
-  };
-
-  const submitQuery = (type) => {
+  const submitQuery = async (type) => {
     if (!query.trim()) return;
     setIsLoading(true);
+    setError(null);
 
-    setTimeout(() => {
-      const answer = generateResponse(type, query);
-      setHistory([{ type, question: query, answer, timestamp: new Date().toISOString().split('T')[0] }, ...history]);
-      setQuery('');
+    try {
+      const businessData = {
+        sales: internalData.sales,
+        expenses: internalData.expenses,
+        products: internalData.products,
+        inventory: internalData.inventory,
+        staff: internalData.staff,
+        suppliers: internalData.suppliers,
+      };
+
+      let answer = '';
+
+      if (type === 'whatif') {
+        const res = await getWhatIf({ question: query, business_data: businessData });
+        if (res.success) {
+          const { analysis, pros, cons, recommendation } = res.result;
+          answer = analysis || '';
+          if (pros && pros.length > 0) {
+            answer += '\n\n**Pros:**\n' + pros.map(p => `- ${p}`).join('\n');
+          }
+          if (cons && cons.length > 0) {
+            answer += '\n\n**Cons:**\n' + cons.map(c => `- ${c}`).join('\n');
+          }
+          if (recommendation) {
+            answer += `\n\n**Recommendation:** ${recommendation}`;
+          }
+        } else {
+          setError(res.error || 'Failed to get analysis');
+        }
+      } else {
+        const res = await askAI({ question: query, business_data: businessData });
+        if (res.success) {
+          answer = res.result.answer;
+        } else {
+          setError(res.error || 'Failed to get answer');
+        }
+      }
+
+      if (answer) {
+        const formatted = formatAnswer(answer);
+        setHistory([{ type, question: query, formatted, timestamp: new Date().toISOString().split('T')[0] }, ...history]);
+        setQuery('');
+      }
+    } catch (err) {
+      setError('Connection error. Make sure the backend is running.');
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   const selectTemplate = (q) => setQuery(q);
@@ -96,10 +189,9 @@ const AIAssistant = () => {
         <p>Ask what-if questions and get AI-powered business insights</p>
       </header>
 
-      {/* Tier Access Notice */}
       {tierAccess === 'none' && (
         <div className="tier-notice warning">
-          <span className="badge">⚠️ Limited Access</span>
+          <span className="badge">Limited Access</span>
           <p>Add sales and expense data to unlock AI features</p>
         </div>
       )}
@@ -122,14 +214,20 @@ const AIAssistant = () => {
         </div>
       )}
 
-      {/* Query Input */}
+      {error && (
+        <div className="tier-notice warning">
+          <span className="badge">Error</span>
+          <p>{error}</p>
+        </div>
+      )}
+
       <div className="query-section">
         <div className="query-tabs">
           <button className={`query-tab ${activeTab === 'whatif' ? 'active' : ''}`} onClick={() => setActiveTab('whatif')}>
-            🔮 What-if Analysis
+            What-if Analysis
           </button>
           <button className={`query-tab ${activeTab === 'ask' ? 'active' : ''}`} onClick={() => setActiveTab('ask')}>
-            💬 Ask AI
+            Ask AI
           </button>
         </div>
         <div className="query-input">
@@ -140,34 +238,22 @@ const AIAssistant = () => {
             rows="3"
           />
           <div className="query-buttons">
-            <button 
-              className="submit-btn" 
+            <button
+              className="submit-btn"
               onClick={() => submitQuery(activeTab)}
               disabled={!query.trim() || isLoading}
             >
-              {isLoading ? '🔄 Analyzing...' : activeTab === 'whatif' ? '🔮 Run What-if' : '💬 Ask AI'}
+              {isLoading ? 'Analyzing...' : activeTab === 'whatif' ? 'Run What-if' : 'Ask AI'}
             </button>
           </div>
         </div>
       </div>
 
-      {/* Templates */}
       <div className="templates-section">
         <div className="template-group">
-          <h3>🔮 What-if Templates</h3>
+          <h3>{activeTab === 'whatif' ? 'What-if Templates' : 'Ask Templates'}</h3>
           <div className="template-list">
-            {whatIfTemplates.map((t, idx) => (
-              <button key={idx} className="template-btn" onClick={() => selectTemplate(t.q)}>
-                <span className="template-q">{t.q}</span>
-                <span className="template-desc">{t.desc}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-        <div className="template-group">
-          <h3>💬 Ask Templates</h3>
-          <div className="template-list">
-            {askTemplates.map((t, idx) => (
+            {(activeTab === 'whatif' ? whatIfTemplates : askTemplates).map((t, idx) => (
               <button key={idx} className="template-btn" onClick={() => selectTemplate(t.q)}>
                 <span className="template-q">{t.q}</span>
                 <span className="template-desc">{t.desc}</span>
@@ -177,22 +263,21 @@ const AIAssistant = () => {
         </div>
       </div>
 
-      {/* History */}
       <div className="history-section">
-        <h3>📚 Previous Questions ({history.length})</h3>
+        <h3>Previous Questions ({history.length})</h3>
         <div className="history-list">
           {history.map((item, idx) => (
             <div key={idx} className={`history-card ${item.type}`}>
               <div className="history-header">
                 <span className={`type-badge ${item.type}`}>
-                  {item.type === 'whatif' ? '🔮 What-if' : '💬 Ask'}
+                  {item.type === 'whatif' ? 'What-if' : 'Ask'}
                 </span>
                 <span className="timestamp">{item.timestamp}</span>
               </div>
               <p className="question">{item.question}</p>
               <div className="answer">
-                {item.answer.split('\n').map((line, i) => (
-                  <p key={i}>{line}</p>
+                {item.formatted.map((block, i) => (
+                  <RenderBlock key={i} block={block} idx={i} />
                 ))}
               </div>
             </div>
@@ -203,10 +288,9 @@ const AIAssistant = () => {
         </div>
       </div>
 
-      {/* Access Required Message */}
       {tierAccess !== 'advanced' && (
         <div className="upgrade-notice">
-          <h4>🔒 Advanced Features</h4>
+          <h4>Advanced Features</h4>
           <p>To unlock full AI What-if analysis, add:</p>
           <ul>
             {tierAccess === 'none' && <li>Sales & Expenses data (Basic tier)</li>}

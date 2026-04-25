@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from app.services.glm_service import call_glm, call_glm_with_context
+from app.services.glm_service import call_glm, call_glm_with_context, parse_json_response
 
 bp = Blueprint('api', __name__, url_prefix='/api')
 
@@ -155,36 +155,87 @@ def get_actions():
 
 @bp.route('/ai/whatif', methods=['POST'])
 def whatif_analysis():
-    """What-if analysis"""
+    """What-if analysis powered by GLM"""
     data = request.get_json()
     question = data.get('question', '')
+    business_data = data.get('business_data', {})
 
-    # Mock response
-    return jsonify({
-        'success': True,
-        'result': {
-            'question': question,
-            'analysis': 'Based on your data, this would result in approximately X. Consider the trade-offs.',
-            'pros': ['Increased profit margin', 'Better inventory turnover'],
-            'cons': ['Potential customer pushback', 'Volume may decrease']
-        }
-    })
+    system_prompt = """You are an SME business advisor for a mini market in Malaysia.
+Analyze what-if scenarios and provide practical advice.
+Structure your response with these sections:
+- Analysis: detailed analysis of the scenario
+- Pros: list positive outcomes
+- Cons: list risks or negative outcomes
+- Recommendation: clear actionable recommendation
+Keep responses practical and specific to Malaysian mini market context. Use RM for currency."""
+
+    business_context = _format_business_context(business_data)
+    full_prompt = f"Business Data:\n{business_context}\n\nWhat-if Question: {question}"
+
+    try:
+        result = call_glm_with_context(full_prompt, system_prompt=system_prompt, temperature=0.7, max_tokens=1024)
+
+        # Try JSON parse first, fall back to raw text
+        parsed = parse_json_response(result)
+        if 'raw_text' not in parsed:
+            return jsonify({
+                'success': True,
+                'result': {
+                    'question': question,
+                    'analysis': parsed.get('analysis', ''),
+                    'pros': parsed.get('pros', []),
+                    'cons': parsed.get('cons', []),
+                    'recommendation': parsed.get('recommendation', '')
+                }
+            })
+
+        # Return raw text as the analysis
+        return jsonify({
+            'success': True,
+            'result': {
+                'question': question,
+                'analysis': result,
+                'pros': [],
+                'cons': [],
+                'recommendation': ''
+            }
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
 
 
 @bp.route('/ai/ask', methods=['POST'])
 def ask_ai():
-    """Ask AI a question"""
+    """Ask AI a question powered by GLM"""
     data = request.get_json()
     question = data.get('question', '')
+    business_data = data.get('business_data', {})
 
-    # Mock response
-    return jsonify({
-        'success': True,
-        'result': {
-            'question': question,
-            'answer': 'Based on your data: The analysis shows that sales patterns indicate...'
-        }
-    })
+    system_prompt = """You are an SME business advisor for a mini market in Malaysia.
+Answer business questions with practical, actionable advice.
+Keep answers concise but informative. Use RM for currency.
+Reference specific data when available."""
+
+    business_context = _format_business_context(business_data)
+    full_prompt = f"Business Data:\n{business_context}\n\nQuestion: {question}"
+
+    try:
+        result = call_glm_with_context(full_prompt, system_prompt=system_prompt, temperature=0.7, max_tokens=1024)
+        return jsonify({
+            'success': True,
+            'result': {
+                'question': question,
+                'answer': result
+            }
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
 
 
 # ============== External Data ==============
@@ -211,6 +262,44 @@ def fetch_external():
             ]
         }
     })
+
+
+# ============== Helpers ==============
+
+def _format_business_context(business_data):
+    """Format business data into a readable context string for GLM prompts"""
+    if not business_data:
+        return "No business data provided yet."
+
+    parts = []
+
+    sales = business_data.get('sales', [])
+    if sales:
+        total_revenue = sum(float(s.get('revenue', 0)) for s in sales)
+        parts.append(f"Sales entries: {len(sales)}, Total Revenue: RM{total_revenue:.2f}")
+
+    expenses = business_data.get('expenses', [])
+    if expenses:
+        total_expenses = sum(float(e.get('amount', 0)) for e in expenses)
+        parts.append(f"Expense entries: {len(expenses)}, Total Expenses: RM{total_expenses:.2f}")
+
+    products = business_data.get('products', [])
+    if products:
+        product_names = [p.get('name', '') for p in products[:10]]
+        parts.append(f"Products: {', '.join(product_names)}")
+
+    inventory = business_data.get('inventory', [])
+    if inventory:
+        low_stock = [i.get('name', '') for i in inventory if i.get('quantity', 999) <= i.get('reorderLevel', 0)]
+        if low_stock:
+            parts.append(f"Low stock items: {', '.join(low_stock)}")
+
+    staff = business_data.get('staff', [])
+    if staff:
+        total_staff_cost = sum(float(s.get('count', 0)) * float(s.get('wage', 0)) for s in staff)
+        parts.append(f"Staff cost: RM{total_staff_cost:.2f}/month")
+
+    return '\n'.join(parts) if parts else "No business data provided yet."
 
 
 # ============== Mock Helpers ==============

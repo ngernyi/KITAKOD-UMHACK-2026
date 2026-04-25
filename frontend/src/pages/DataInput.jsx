@@ -127,11 +127,18 @@ const DataInput = () => {
       const lines = text.split('\n');
       const data = [];
 
-      // Skip header row, parse data
+      // Parse header row to get field names
+      const headers = lines[0].split(',').map(h => h.trim());
+
       for (let i = 1; i < lines.length; i++) {
-        const row = lines[i].split(',').map(cell => cell.trim());
-        if (row.length > 1 && row[0]) {
-          data.push({ ...row, id: Date.now() + i });
+        const values = lines[i].split(',').map(cell => cell.trim());
+        if (values.length > 1 && values[0]) {
+          const row = {};
+          headers.forEach((key, idx) => {
+            row[key] = values[idx] || '';
+          });
+          row.id = Date.now() + i;
+          data.push(row);
         }
       }
 
@@ -144,10 +151,26 @@ const DataInput = () => {
         setInternalData({ ...internalData, products: [...internalData.products, ...data] });
       } else if (type === 'inventory') {
         setInternalData({ ...internalData, inventory: [...internalData.inventory, ...data] });
+      } else if (type === 'customers') {
+        setInternalData({ ...internalData, customers: [...internalData.customers, ...data] });
+      } else if (type === 'staff') {
+        setInternalData({ ...internalData, staff: [...internalData.staff, ...data] });
+      } else if (type === 'suppliers') {
+        setInternalData({ ...internalData, suppliers: [...internalData.suppliers, ...data] });
+      } else if (type === 'marketing') {
+        setInternalData({ ...internalData, marketing: [...internalData.marketing, ...data] });
+      } else if (type === 'pricing') {
+        setInternalData({ ...internalData, pricingHistory: [...internalData.pricingHistory, ...data] });
       }
     };
     reader.readAsText(file);
   };
+
+  const getUploadButton = (currentTab) => (
+    <button className="tab upload-btn" onClick={() => document.getElementById(`csv-upload-${currentTab}`).click()}>
+      📤 Upload CSV
+    </button>
+  );
 
   const tiers = [
     { key: 'basic', label: 'Basic', data: 'Sales, Expenses', desc: 'Required for basic analysis' },
@@ -292,6 +315,14 @@ const DataInput = () => {
                 <span className="tab-count">{tab.count}</span>
               </button>
             ))}
+            {getUploadButton(activeTab)}
+            <input
+              type="file"
+              id={`csv-upload-${activeTab}`}
+              style={{ display: 'none' }}
+              accept=".csv"
+              onChange={(e) => handleFileUpload(e, activeTab)}
+            />
           </div>
 
           {activeTab === 'products' && (
@@ -392,6 +423,14 @@ const DataInput = () => {
                 <span className="tab-count">{tab.count}</span>
               </button>
             ))}
+            {getUploadButton(activeTab)}
+            <input
+              type="file"
+              id={`csv-upload-${activeTab}`}
+              style={{ display: 'none' }}
+              accept=".csv"
+              onChange={(e) => handleFileUpload(e, activeTab)}
+            />
           </div>
 
           {activeTab === 'staff' && (

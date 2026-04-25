@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useApp } from '../context/AppContext';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
 import './Predictions.css';
 
 const Predictions = () => {
@@ -17,7 +18,8 @@ const Predictions = () => {
       day: i === 0 ? 'Tomorrow' : `Day ${i + 1}`,
       date: new Date(Date.now() + (i + 1) * 86400000).toLocaleDateString('en-MY', { weekday: 'short', day: 'numeric' }),
       predicted: Math.round(baseValue),
-      range: `${Math.round(baseValue - 50)}-${Math.round(baseValue + 50)}`,
+      lower: Math.round(baseValue - 50),
+      upper: Math.round(baseValue + 50),
       trend: baseValue > 400 ? 'up' : baseValue < 300 ? 'down' : 'stable'
     };
   });
@@ -56,75 +58,89 @@ const Predictions = () => {
         </button>
       </div>
 
-      {/* Forecast Results */}
-      <div className="forecast-section">
+      {/* Top Section - Info Cards */}
+      <div className="predictions-top-grid">
+        {/* Seasonality */}
+        <div className="seasonality-section">
+          <h3>📅 Seasonality & Events</h3>
+          <div className="seasonality-list">
+            {mockSeasonality.map((s, idx) => (
+              <div key={idx} className={`seasonality-card ${s.status}`}>
+                <span className="period">{s.period}</span>
+                <span className="impact">{s.impact}</span>
+                <span className="status-badge">{s.status}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Trending Items */}
+        <div className="trending-section">
+          <h3>🔥 Trending Items</h3>
+          <div className="trending-list">
+            {mockTrends.map((t, idx) => (
+              <div key={idx} className="trending-card">
+                <span className="item-name">{t.item}</span>
+                <div className="trend-stats">
+                  <span className="search-change">{t.search}</span>
+                  <span className={`action ${t.action === 'Stock more' ? 'warning' : t.action === 'Monitor' ? 'info' : 'normal'}`}>
+                    {t.action}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Summary */}
+        <div className="forecast-summary">
+          <h3>📊 Summary</h3>
+          <div className="summary-items">
+            <div className="summary-item">
+              <span className="label">Average Forecast</span>
+              <span className="value">RM 380/day</span>
+            </div>
+            <div className="summary-item">
+              <span className="label">Peak Day</span>
+              <span className="value">RM 480 (Day 5)</span>
+            </div>
+            <div className="summary-item">
+              <span className="label">Trend Direction</span>
+              <span className="value trend-up">📈 Upward</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Bottom Section - Forecast Graph */}
+      <div className="forecast-graph-section">
         <h3>📈 {forecastDays}-Day Demand Forecast</h3>
-        <div className="forecast-list">
-          {mockForecastData.map((f, idx) => (
-            <div key={idx} className={`forecast-card ${f.trend}`}>
-              <div className="forecast-day">
-                <span className="day-name">{f.day}</span>
-                <span className="day-date">{f.date}</span>
-              </div>
-              <div className="forecast-value">
-                <span className="predicted">RM {f.predicted}</span>
-                <span className="range">Range: {f.range}</span>
-              </div>
-              <div className="trend-indicator">
-                {f.trend === 'up' && <span className="trend-badge up">📈</span>}
-                {f.trend === 'down' && <span className="trend-badge down">📉</span>}
-                {f.trend === 'stable' && <span className="trend-badge stable">➡️</span>}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Seasonality */}
-      <div className="seasonality-section">
-        <h3>📅 Seasonality & Events</h3>
-        <div className="seasonality-list">
-          {mockSeasonality.map((s, idx) => (
-            <div key={idx} className={`seasonality-card ${s.status}`}>
-              <span className="period">{s.period}</span>
-              <span className="impact">{s.impact}</span>
-              <span className="status-badge">{s.status}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Trending Items */}
-      <div className="trending-section">
-        <h3>🔥 Trending Items (Google Trends)</h3>
-        <div className="trending-list">
-          {mockTrends.map((t, idx) => (
-            <div key={idx} className="trending-card">
-              <span className="item-name">{t.item}</span>
-              <div className="trend-stats">
-                <span className="search-change">{t.search}</span>
-                <span className={`action ${t.action === 'Stock more' ? 'warning' : t.action === 'Monitor' ? 'info' : 'normal'}`}>
-                  {t.action}
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Summary */}
-      <div className="forecast-summary">
-        <div className="summary-item">
-          <span className="label">Average Forecast</span>
-          <span className="value">RM 380/day</span>
-        </div>
-        <div className="summary-item">
-          <span className="label">Peak Day</span>
-          <span className="value">RM 480 (Day 5)</span>
-        </div>
-        <div className="summary-item">
-          <span className="label">Trend Direction</span>
-          <span className="value trend-up">📈 Upward</span>
+        <div className="graph-container">
+          <ResponsiveContainer width="100%" height={300}>
+            <AreaChart data={mockForecastData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
+              <defs>
+                <linearGradient id="colorPredicted" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#e94560" stopOpacity={0.3}/>
+                  <stop offset="95%" stopColor="#e94560" stopOpacity={0}/>
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="#2d2d4a" />
+              <XAxis dataKey="day" stroke="#8b8b9e" />
+              <YAxis stroke="#8b8b9e" domain={['dataMin - 50', 'dataMax + 50']} />
+              <Tooltip 
+                contentStyle={{ background: '#1a1a2e', border: 'none', borderRadius: '8px' }}
+                formatter={(value) => `RM ${value}`}
+              />
+              <Area 
+                type="monotone" 
+                dataKey="predicted" 
+                stroke="#e94560" 
+                strokeWidth={2}
+                fill="url(#colorPredicted)" 
+                name="Predicted Sales"
+              />
+            </AreaChart>
+          </ResponsiveContainer>
         </div>
       </div>
     </div>
