@@ -1,4 +1,4 @@
-const API_BASE = 'https://kitakod-umhack-2026-web.onrender.com/api';
+const API_BASE = 'https://kitakod-umhack-2026-web2.onrender.com/api';
 
 export const healthCheck = async () => {
   const response = await fetch(`${API_BASE}/health`);
